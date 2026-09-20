@@ -82,9 +82,6 @@ export default async function RecipePage({ params, searchParams }: Props) {
       )}
 
       <section className="mt-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-medium">Cook log</h2>
-        </div>
         <CookLogForm slug={slug} />
         {log.length === 0 && <p className="mt-3 text-stone-500">No entry yet.</p>}
         <ol className="mt-3 space-y-4">
