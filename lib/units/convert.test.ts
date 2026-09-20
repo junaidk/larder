@@ -59,6 +59,24 @@ describe('convertAmount leaves a unit alone', () => {
   })
 })
 
+describe('convertAmount promotes within a system that already matches the target', () => {
+  it('promotes ounces to pounds when already viewed in imperial', () => {
+    // 16 oz x 3 = 48 oz. It must promote to lb even though oz was already
+    // the imperial unit, because convertAmount used to return it early.
+    expect(convertAmount(48, 'oz', 'imperial')).toEqual({ value: 3, unit: 'lb' })
+  })
+
+  it('promotes fluid ounces to cups when already viewed in imperial', () => {
+    // 6 floz x 2 = 12 floz, which is 1.5 cup.
+    expect(convertAmount(12, 'floz', 'imperial')).toEqual({ value: 1.5, unit: 'cup' })
+  })
+
+  it('promotes cups to pints when already viewed in imperial', () => {
+    // 2 cups x 2 = 4 cups, which is 2 pints.
+    expect(convertAmount(4, 'cup', 'imperial')).toEqual({ value: 2, unit: 'pint' })
+  })
+})
+
 describe('convertMethodText', () => {
   it('turns a Celsius oven temperature into Fahrenheit', () => {
     expect(convertMethodText('Bake at 220C for 25 minutes.', 'imperial'))
@@ -91,6 +109,34 @@ describe('convertMethodText', () => {
 
   it('leaves a temperature that is already in the target system', () => {
     expect(convertMethodText('Bake at 220C.', 'metric')).toBe('Bake at 220C.')
+  })
+
+  it('leaves a number outside the oven range alone, converting to metric', () => {
+    // 30 is far below a plausible oven temperature in Fahrenheit. It is
+    // ordinary prose, not a temperature.
+    expect(convertMethodText('Add 30 F flour', 'metric')).toBe('Add 30 F flour')
+  })
+
+  it('leaves a number outside the oven range alone, converting to imperial', () => {
+    // 25 is far below a plausible oven temperature in Celsius.
+    expect(convertMethodText('Cut into 25 C shapes', 'imperial')).toBe('Cut into 25 C shapes')
+  })
+
+  it('still converts a bare form inside the oven range with a space before the letter', () => {
+    expect(convertMethodText('Bake at 200 C.', 'imperial')).toBe('Bake at 400F.')
+  })
+
+  it('still converts the bare form with no space', () => {
+    expect(convertMethodText('Bake at 220C.', 'imperial')).toBe('Bake at 425F.')
+  })
+
+  it('still converts the degree sign form', () => {
+    expect(convertMethodText('Bake at 180°C.', 'imperial')).toBe('Bake at 350F.')
+  })
+
+  it('still converts the word degrees form', () => {
+    expect(convertMethodText('Preheat the oven to 180 degrees C.', 'imperial'))
+      .toBe('Preheat the oven to 350F.')
   })
 })
 

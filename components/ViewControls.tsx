@@ -1,7 +1,8 @@
 'use client'
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { parseFactor } from '@/lib/units/scale'
 
 const STORAGE_KEY = 'recipe-register:units'
 
@@ -14,6 +15,24 @@ export function ViewControls({ serves }: { serves: number | null }) {
   const scale = params.get('scale') ?? ''
   const wantedServes = params.get('serves') ?? ''
   const active = scale !== '' || wantedServes !== '' || units !== 'metric'
+
+  // A free text buffer for the scale factor box. It follows the URL, but
+  // keeps its own text while the user types a value `parseFactor` cannot
+  // read yet, such as the "1/" in "1/2".
+  const [factorText, setFactorText] = useState(scale)
+  useEffect(() => {
+    setFactorText(scale)
+  }, [scale])
+
+  function handleFactorChange(text: string) {
+    setFactorText(text)
+    if (text.trim() === '') {
+      set({ scale: null })
+      return
+    }
+    const parsed = parseFactor(text)
+    if (parsed !== null) set({ scale: String(parsed), serves: null })
+  }
 
   // Remember the unit choice between visits.
   useEffect(() => {
@@ -70,6 +89,16 @@ export function ViewControls({ serves }: { serves: number | null }) {
           </button>
         ))}
 
+        <input
+          type="text"
+          inputMode="decimal"
+          aria-label="Scale factor"
+          placeholder="factor"
+          value={factorText}
+          onChange={(e) => handleFactorChange(e.target.value)}
+          className="w-16 rounded border border-stone-300 px-2 py-1 text-sm"
+        />
+
         {serves !== null && (
           <label className="ml-2 flex items-center gap-2 text-sm text-stone-500">
             Serves
@@ -77,7 +106,7 @@ export function ViewControls({ serves }: { serves: number | null }) {
               type="number"
               min={1}
               max={200}
-              defaultValue={wantedServes || serves}
+              value={wantedServes || serves}
               onChange={(e) => set({ serves: e.target.value, scale: null })}
               className="w-20 rounded border border-stone-300 px-2 py-1"
             />

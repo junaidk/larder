@@ -62,3 +62,24 @@ describe('displayIngredient', () => {
     expect(displayIngredient(line, view('metric', 2))).toBe('4-6 sprigs thyme')
   })
 })
+
+describe('displayIngredient reconciles a range onto one unit', () => {
+  it('keeps both ends in the same unit when neither end promotes', () => {
+    const line = parseIngredientLine('- 2-3 sprigs thyme')
+    expect(displayIngredient(line, view('metric', 2))).toBe('4-6 sprigs thyme')
+  })
+
+  it('reports a metric range in the high end unit when it crosses the kg boundary', () => {
+    // The low end (900 g) stays in grams on its own; the high end (1100 g)
+    // promotes to kilograms. Both ends must read in kilograms.
+    const line = parseIngredientLine('- 900-1100 g flour')
+    expect(displayIngredient(line, view('metric', 1))).toBe('0.9-1.1 kg flour')
+  })
+
+  it('reports an imperial range in the high end unit after conversion crosses the lb boundary', () => {
+    // 850 g converts to 30 oz on its own. 970 g converts to 2.1 lb.
+    // The low end must be re-expressed in pounds, not left in ounces.
+    const line = parseIngredientLine('- 850-970 g flour')
+    expect(displayIngredient(line, view('imperial', 1))).toBe('1.9-2.1 lb flour')
+  })
+})

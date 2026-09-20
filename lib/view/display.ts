@@ -1,8 +1,8 @@
 import type { Ingredient } from '@/lib/recipe/types'
 import type { UnitSystem } from '@/lib/units/convert'
-import { convertAmount } from '@/lib/units/convert'
+import { convertAmount, roundForUnit } from '@/lib/units/convert'
 import { scaleAmount } from '@/lib/units/scale'
-import { displayUnit } from '@/lib/units/table'
+import { displayUnit, unitById } from '@/lib/units/table'
 import { ingredientText } from '@/lib/recipe/ingredient'
 
 const DENOMINATORS = [2, 3, 4, 8]
@@ -52,6 +52,17 @@ function transform(
 }
 
 /**
+ * Re-express a value in another unit of the same dimension, through the
+ * unit table's base factors, then round it for that unit.
+ */
+function reexpress(value: number, fromUnit: string, toUnit: string): number {
+  const from = unitById(fromUnit)
+  const to = unitById(toUnit)
+  if (!from || !to) return value
+  return roundForUnit((value * from.base) / to.base, toUnit)
+}
+
+/**
  * Build the text for one ingredient on the screen.
  * A text line always comes back with no change.
  */
@@ -61,13 +72,27 @@ export function displayIngredient(ingredient: Ingredient, options: ViewOptions):
 
   const low = transform(ingredient.quantity.value, ingredient.unit, options)
 
-  let amount = formatDisplayAmount(low.value)
+  let amount: string
+  let unitId = low.unit
+  let pluralValue = low.value
+
   if (ingredient.quantity.max !== undefined) {
     const high = transform(ingredient.quantity.max, ingredient.unit, options)
-    amount = `${amount}-${formatDisplayAmount(high.value)}`
+    // Each end is scaled and converted on its own, so a promotion can move
+    // one end but not the other. Report both ends in the HIGH end's unit -
+    // the more promoted of the two - so the range never mixes units.
+    unitId = high.unit
+    pluralValue = high.value
+    const lowValue =
+      low.unit && high.unit && low.unit !== high.unit
+        ? reexpress(low.value, low.unit, high.unit)
+        : low.value
+    amount = `${formatDisplayAmount(lowValue)}-${formatDisplayAmount(high.value)}`
+  } else {
+    amount = formatDisplayAmount(low.value)
   }
 
-  const unitWord = low.unit ? displayUnit(low.unit, low.value) : ''
+  const unitWord = unitId ? displayUnit(unitId, pluralValue) : ''
   const parts = [amount, unitWord, ingredient.item].filter(Boolean)
   const head = parts.join(' ')
   return ingredient.prep ? `${head}, ${ingredient.prep}` : head

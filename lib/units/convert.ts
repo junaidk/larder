@@ -57,7 +57,22 @@ export function convertAmount(
   const unit = unitById(unitId)
   if (!unit) return { value, unit: unitId }
   if (unit.system === 'both' || unit.dimension === 'count') return { value, unit: unitId }
-  if (unit.system === target) return { value, unit: unitId }
+
+  if (unit.system === target) {
+    // Already the right system. Still promote to a larger unit when the
+    // number has grown past a threshold, so an imperial recipe promotes
+    // oz to lb, floz to cup and cup to pint even with no system change.
+    const inBase = value * unit.base
+    let id = unitId
+    let out = value
+    for (const promotion of PROMOTIONS) {
+      if (promotion.from === id && out >= promotion.at) {
+        id = promotion.to
+        out = inBase / unitById(id)!.base
+      }
+    }
+    return { value: roundForUnit(out, id), unit: id }
+  }
 
   if (unit.dimension === 'temperature') {
     const raw = target === 'imperial' ? celsiusToFahrenheit(value) : fahrenheitToCelsius(value)
@@ -90,6 +105,10 @@ const GAS_MARKS: Record<string, number> = {
 const TEMPERATURE_RE = /(\d{2,3})\s*(?:°\s*([CF])\b|°(?![CF])|\s*degrees?\s*([CF])?\b|([CF])\b)/gi
 const GAS_RE = /gas\s*mark\s*([1-9])/gi
 
+// A plausible oven range. A number outside it is prose, not a temperature.
+const OVEN_RANGE_C: [number, number] = [50, 300]
+const OVEN_RANGE_F: [number, number] = [120, 600]
+
 /**
  * Rewrite oven temperatures in the method text.
  * The function reads C, F and a gas mark. It writes C or F only.
@@ -108,6 +127,11 @@ export function convertMethodText(text: string, target: UnitSystem): string {
     // A number with no C or F is not a temperature. Leave it alone.
     if (letter !== 'C' && letter !== 'F') return whole
     const source = letter as 'C' | 'F'
+    const value = Number(digits)
+    const [min, max] = source === 'C' ? OVEN_RANGE_C : OVEN_RANGE_F
+    // A number outside the plausible oven range is ordinary prose, not a
+    // temperature. Example: "Add 30 F flour" or "Cut into 25 C shapes".
+    if (value < min || value > max) return whole
     const wanted = target === 'imperial' ? 'F' : 'C'
     if (source === wanted) return whole
     const raw = source === 'C'

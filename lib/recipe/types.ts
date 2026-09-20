@@ -99,7 +99,7 @@ export interface RecipeSummary {
   /** The date of the newest cook log entry, or `null`. */
   lastCooked: string | null
   timesCooked: number
-  /** Lowercase title and item names, for the search box. */
+  /** Lowercase title, tags and ingredient items, for the search box. */
   searchText: string
 }
 
