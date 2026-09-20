@@ -19,6 +19,15 @@ export interface DisplayGroup {
 export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
   const [done, setDone] = useState<Record<string, boolean>>({})
 
+  // The amount and its unit sit together in one column, sized to the widest
+  // pair in the list. One gap then separates them from the names, which all
+  // start at the same place.
+  const rows = groups.flatMap((g) => g.ingredients)
+  const measureWidth = `${Math.max(
+    1,
+    ...rows.map((r) => `${r.amount} ${r.unit}`.trim().length),
+  )}ch`
+
   function toggle(key: string) {
     setDone((previous) => ({ ...previous, [key]: !previous[key] }))
   }
@@ -43,7 +52,7 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
                     onClick={() => toggle(key)}
                     aria-pressed={struck}
                     aria-label={p.line}
-                    className={`flex w-full gap-2 rounded px-1 py-1 text-left hover:bg-stone-100 ${
+                    className={`flex w-full gap-2.5 rounded px-1 py-1 text-left hover:bg-stone-100 ${
                       struck ? 'opacity-40' : ''
                     }`}
                   >
@@ -58,18 +67,11 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
                     ) : (
                       <>
                         <span
-                          className={`w-14 shrink-0 font-sans text-sm font-medium tabular-nums text-stone-900 ${
-                            struck ? 'line-through' : ''
-                          }`}
+                          style={{ width: measureWidth }}
+                          className={`shrink-0 font-sans text-sm ${struck ? 'line-through' : ''}`}
                         >
-                          {p.amount}
-                        </span>
-                        <span
-                          className={`w-12 shrink-0 font-sans text-sm text-stone-400 ${
-                            struck ? 'line-through' : ''
-                          }`}
-                        >
-                          {p.unit}
+                          <span className="font-medium tabular-nums text-stone-900">{p.amount}</span>
+                          {p.unit && <span className="text-stone-400"> {p.unit}</span>}
                         </span>
                         <span
                           className={`min-w-0 font-serif text-stone-800 ${struck ? 'line-through' : ''}`}
