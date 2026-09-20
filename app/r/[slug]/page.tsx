@@ -1,13 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Suspense } from 'react'
 import { readRecipe } from '@/lib/storage/index'
 import { cookLog, ingredientGroups, methodText, notesText } from '@/lib/recipe/access'
 import { displayIngredient, displayIngredientParts } from '@/lib/view/display'
 import { convertMethodText } from '@/lib/units/convert'
 import { splitMethodText } from '@/lib/view/method'
 import { readViewParams } from '@/lib/view/params'
-import { ViewControls } from '@/components/ViewControls'
+import { RecipeLayout } from '@/components/RecipeLayout'
 import { CookLogForm } from '@/components/CookLogForm'
 import { DeleteLogEntry } from '@/components/DeleteLogEntry'
 import { IngredientList } from '@/components/IngredientList'
@@ -73,63 +72,59 @@ export default async function RecipePage({ params, searchParams }: Props) {
         </dl>
       </header>
 
-      <div className="no-print my-8 border-y border-stone-200 py-4">
-        <Suspense fallback={null}>
-          <ViewControls serves={fm.serves} />
-        </Suspense>
-      </div>
-
-      {/* Ingredients stay beside the method on a wide screen, and stick while
-          you scroll, so an amount is always in view during a step. */}
-      <div className="print-single-column grid gap-10 lg:grid-cols-[19rem_1fr] lg:gap-14">
-        <section className="lg:sticky lg:top-8 lg:self-start">
-          <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
-            Ingredients
-          </h2>
-          <IngredientList groups={groups} />
-        </section>
-
-        <div className="min-w-0">
-          <section>
+      <RecipeLayout
+        serves={fm.serves}
+        ingredients={
+          <section className="recipe-ingredients">
             <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
-              Method
+              Ingredients
             </h2>
-            <MethodSteps lead={method.lead} steps={method.steps} />
+            <IngredientList groups={groups} />
           </section>
-
-          {notes && (
-            <section className="mt-10 rounded-lg border border-stone-200 bg-white p-5">
-              <h2 className="mb-3 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
-                Notes
+        }
+        body={
+          <div className="min-w-0">
+            <section className="lg:min-h-80">
+              <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
+                Method
               </h2>
-              <div className="font-serif leading-relaxed whitespace-pre-wrap text-stone-700">
-                {notes}
-              </div>
+              <MethodSteps lead={method.lead} steps={method.steps} />
             </section>
-          )}
 
-          <section className="no-print mt-12">
-            <CookLogForm slug={slug} />
-            {log.length === 0 && <p className="mt-3 font-sans text-sm text-stone-500">No entry yet.</p>}
-            <ol className="mt-4 space-y-4">
-              {log.map((entry, i) => (
-                <li key={`${entry.date}-${i}`} className="rounded-lg border border-stone-200 bg-white p-4">
-                  <div className="flex items-center gap-3 font-sans text-sm">
-                    <time className="font-medium text-stone-700">{entry.date}</time>
-                    <Stars rating={entry.rating} />
-                    <span className="ml-auto">
-                      <DeleteLogEntry slug={slug} index={i} date={entry.date} />
-                    </span>
-                  </div>
-                  <div className="mt-2 font-serif leading-relaxed whitespace-pre-wrap text-stone-700">
-                    {entry.note}
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </section>
-        </div>
-      </div>
+            {notes && (
+              <section className="mt-10 rounded-lg border border-stone-200 bg-white p-5">
+                <h2 className="mb-3 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
+                  Notes
+                </h2>
+                <div className="font-serif leading-relaxed whitespace-pre-wrap text-stone-700">
+                  {notes}
+                </div>
+              </section>
+            )}
+
+            <section className="no-print mt-12">
+              <CookLogForm slug={slug} />
+              {log.length === 0 && <p className="mt-3 font-sans text-sm text-stone-500">No entry yet.</p>}
+              <ol className="mt-4 space-y-4">
+                {log.map((entry, i) => (
+                  <li key={`${entry.date}-${i}`} className="rounded-lg border border-stone-200 bg-white p-4">
+                    <div className="flex items-center gap-3 font-sans text-sm">
+                      <time className="font-medium text-stone-700">{entry.date}</time>
+                      <Stars rating={entry.rating} />
+                      <span className="ml-auto">
+                        <DeleteLogEntry slug={slug} index={i} date={entry.date} />
+                      </span>
+                    </div>
+                    <div className="mt-2 font-serif leading-relaxed whitespace-pre-wrap text-stone-700">
+                      {entry.note}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </div>
+        }
+      />
     </main>
   )
 }

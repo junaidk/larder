@@ -58,7 +58,7 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
                     ) : (
                       <>
                         <span
-                          className={`w-14 shrink-0 text-right font-sans text-sm font-medium tabular-nums text-stone-900 ${
+                          className={`w-14 shrink-0 font-sans text-sm font-medium tabular-nums text-stone-900 ${
                             struck ? 'line-through' : ''
                           }`}
                         >

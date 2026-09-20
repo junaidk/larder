@@ -3,15 +3,25 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { parseFactor } from '@/lib/units/scale'
+import { resolveUnits } from '@/lib/view/units'
 
 const STORAGE_KEY = 'recipe-register:units'
+const COLUMNS_KEY = 'recipe-register:columns'
 
-export function ViewControls({ serves }: { serves: number | null }) {
+export function ViewControls({
+  serves,
+  columns,
+  onColumns,
+}: {
+  serves: number | null
+  columns: 'one' | 'two'
+  onColumns: (next: 'one' | 'two') => void
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
 
-  const units = params.get('units') === 'imperial' ? 'imperial' : 'metric'
+  const units = resolveUnits(params.get('units'), null).system
   const scale = params.get('scale') ?? ''
   const wantedServes = params.get('serves') ?? ''
   const active = scale !== '' || wantedServes !== '' || units !== 'metric'
@@ -34,18 +44,16 @@ export function ViewControls({ serves }: { serves: number | null }) {
     if (parsed !== null) set({ scale: String(parsed), serves: null })
   }
 
-  // Remember the unit choice between visits.
+  // Put the saved unit choice back, once, when the URL names no system.
+  // This runs on mount only. Running it on every change of the query is what
+  // made a click on Metric bounce straight back to imperial.
   useEffect(() => {
-    if (params.get('units')) {
-      try { localStorage.setItem(STORAGE_KEY, units) } catch { /* private mode */ }
-      return
-    }
     let saved: string | null = null
     try { saved = localStorage.getItem(STORAGE_KEY) } catch { /* private mode */ }
-    if (saved === 'imperial') set({ units: 'imperial' })
-  // The effect must run on a change of the query only.
+    const resolved = resolveUnits(params.get('units'), saved)
+    if (resolved.restore) set({ units: resolved.system })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params])
+  }, [])
 
   function set(changes: Record<string, string | null>) {
     const next = new URLSearchParams(params.toString())
@@ -64,7 +72,10 @@ export function ViewControls({ serves }: { serves: number | null }) {
           <button
             key={value}
             type="button"
-            onClick={() => set({ units: value === 'metric' ? null : value })}
+            onClick={() => {
+              try { localStorage.setItem(STORAGE_KEY, value) } catch { /* private mode */ }
+              set({ units: value })
+            }}
             aria-pressed={units === value}
             className={`rounded px-3 py-1 text-sm ${
               units === value ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-700'
@@ -99,6 +110,24 @@ export function ViewControls({ serves }: { serves: number | null }) {
           className="w-16 rounded border border-stone-300 px-2 py-1 text-sm"
         />
 
+        {/* Only a wide screen has room for two columns. */}
+        <span className="ml-4 hidden text-sm text-stone-500 lg:inline">Layout</span>
+        <div className="hidden rounded bg-stone-100 p-1 lg:flex">
+          {([['two', 'Two columns'], ['one', 'One column']] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onColumns(value)}
+              aria-pressed={columns === value}
+              className={`rounded px-3 py-1 text-sm ${
+                columns === value ? 'bg-white shadow' : 'text-stone-600'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {serves !== null && (
           <label className="ml-2 flex items-center gap-2 text-sm text-stone-500">
             Serves
@@ -119,7 +148,10 @@ export function ViewControls({ serves }: { serves: number | null }) {
           This view is not the file. The file keeps the amounts as written.
           <button
             type="button"
-            onClick={() => set({ units: null, scale: null, serves: null })}
+            onClick={() => {
+              try { localStorage.removeItem(STORAGE_KEY) } catch { /* private mode */ }
+              set({ units: null, scale: null, serves: null })
+            }}
             className="underline"
           >
             Reset

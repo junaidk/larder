@@ -8,6 +8,16 @@
   --font-serif: Charter, var(--font-serif-face), "Bitstream Charter", Georgia, serif;
 }
 
+/* The ingredients hold their place beside a scrolling method, but only when
+   the page is in two columns and the screen is wide enough for them. */
+@media (min-width: 1024px) {
+  [data-columns="two"] > .recipe-ingredients {
+    position: sticky;
+    top: 2rem;
+    align-self: start;
+  }
+}
+
 /* A recipe on paper: the text only, black on white, no controls. */
 @media print {
   .no-print { display: none !important; }

@@ -76,6 +76,23 @@ test('create a recipe, then add a cook log entry', async ({ page }) => {
   expect(afterDelete).toContain(bodyBefore.trimEnd())
 })
 
+test('a saved imperial choice does not block a click on Metric', async ({ page }) => {
+  // The saved choice used to come straight back, because metric was written
+  // as "no units parameter", which the restore step read as "never chosen".
+  await page.goto('/r/test-loaf')
+  await page.evaluate(() => localStorage.setItem('recipe-register:units', 'imperial'))
+  await page.goto('/r/test-loaf')
+
+  await expect(page.getByRole('button', { name: 'Imperial' })).toHaveAttribute('aria-pressed', 'true')
+
+  await page.getByRole('button', { name: 'Metric' }).click()
+  await expect(page.getByRole('button', { name: 'Metric' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page).toHaveURL(/units=metric/)
+
+  // And the amounts really do go back to the units in the file.
+  await expect(page.getByRole('button', { name: '500 g strong white flour' })).toBeVisible()
+})
+
 test('an edit made outside the app appears on the next load', async ({ page }) => {
   await page.goto('/r/test-loaf')
   await expect(page.getByRole('heading', { name: 'Test Loaf' })).toBeVisible()
