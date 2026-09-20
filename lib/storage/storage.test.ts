@@ -1,7 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtempSync, rmSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import * as fsp from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+
+// `link` is wrapped so a single test can force a non-EEXIST failure. Every
+// other call falls through to the real implementation.
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  return { ...actual, link: vi.fn(actual.link) }
+})
 
 let dir: string
 
@@ -81,6 +89,15 @@ describe('createRecipe', () => {
     expect(readFileSync(join(dir, 'focaccia.md'), 'utf8')).toBe('original content')
     expect(readFileSync(join(dir, 'focaccia-2.md'), 'utf8')).toContain('title: Focaccia')
   })
+
+  it('leaves no temp file behind when a create fails', async () => {
+    const { createRecipe } = await mod()
+    const linkMock = vi.mocked(fsp.link)
+    linkMock.mockRejectedValueOnce(Object.assign(new Error('disk gone'), { code: 'EIO' }))
+
+    await expect(createRecipe('Focaccia', '---\ntitle: Focaccia\n---\n')).rejects.toThrow('disk gone')
+    expect(readdirSync(dir)).toEqual([])
+  })
 })
 
 describe('readRecipe', () => {
@@ -126,6 +143,37 @@ describe('addLogEntry', () => {
     expect(out).toContain('## Cook Log')
     expect(out).toContain('### 2026-09-14 — ★★★★★')
     expect(out).toContain('1. Toast it.')
+  })
+
+  it('adds a blank separator line when the section above is Ingredients', async () => {
+    const { addLogEntry } = await mod()
+    const fixture = [
+      '---', 'title: Focaccia', '---', '',
+      '## Ingredients', '',
+      '- 500 g strong white flour',
+      '- 350 ml warm water',
+      '- 7 g instant yeast',
+      '',
+    ].join('\n')
+    writeFileSync(join(dir, 'focaccia.md'), fixture)
+
+    await addLogEntry('focaccia', { date: '2026-09-14', rating: 4, note: 'Nice bread.' })
+    const out = readFileSync(join(dir, 'focaccia.md'), 'utf8')
+
+    // The new section and entry are present.
+    expect(out).toContain('## Cook Log')
+    expect(out.indexOf('## Cook Log')).toBeGreaterThan(out.indexOf('## Ingredients'))
+    expect(out.indexOf('### 2026-09-14 — ★★★★☆')).toBeGreaterThan(out.indexOf('## Cook Log'))
+    expect(out).toContain('Nice bread.')
+
+    // Every ingredient line survives, unchanged.
+    expect(out).toContain('- 500 g strong white flour')
+    expect(out).toContain('- 350 ml warm water')
+    expect(out).toContain('- 7 g instant yeast')
+
+    // Exactly one blank line joins the ingredients to the new heading.
+    expect(out).toContain('- 7 g instant yeast\n\n## Cook Log')
+    expect(out).not.toContain('- 7 g instant yeast\n\n\n## Cook Log')
   })
 })
 

@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { mkdir, readFile, readdir, rename, writeFile, unlink } from 'node:fs/promises'
+import { link, mkdir, readFile, readdir, rename, writeFile, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { CookLogEntry, Recipe, RecipeSummary } from '@/lib/recipe/types'
 import { parseRecipe } from '@/lib/recipe/parse'
@@ -84,25 +84,41 @@ const MAX_SLUG_ATTEMPTS = 1000
 /**
  * Create a new recipe file with a slug that no other file holds.
  *
- * The exclusive `wx` flag makes the create atomic against a race: the
- * open fails with `EEXIST` when another writer has already claimed the
- * path, instead of silently overwriting it the way `rename` would.
+ * The content is written to a temp file first, under a throwaway name, in
+ * the same directory as the target. Only then does the function try to
+ * claim a filename, with `link()` from the temp file to the target path.
+ * `link()` fails with `EEXIST` when another writer already holds the
+ * path, exactly as the earlier `wx` flag did, so the suffix-advance loop
+ * keeps its shape.
+ *
+ * Because the content is complete on disk before the `link` call runs,
+ * the target path can only ever be absent or complete. A crash between
+ * the two steps leaves the temp file behind, never a truncated recipe at
+ * a clean slug. The temp file is removed on every exit, success or
+ * failure, so a failed create leaves no rubbish behind.
  */
 export async function createRecipe(title: string, markdown: string): Promise<string> {
   const base = slugify(title)
   await mkdir(recipesDir(), { recursive: true })
 
-  let slug = base
-  for (let n = 2; n <= MAX_SLUG_ATTEMPTS; n += 1) {
-    try {
-      await writeFile(pathFor(slug), markdown, { encoding: 'utf8', flag: 'wx' })
-      return slug
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
-      slug = `${base}-${n}`
+  const temp = join(recipesDir(), `.${base}.${randomBytes(6).toString('hex')}.tmp`)
+  await writeFile(temp, markdown, 'utf8')
+
+  try {
+    let slug = base
+    for (let n = 2; n <= MAX_SLUG_ATTEMPTS; n += 1) {
+      try {
+        await link(temp, pathFor(slug))
+        return slug
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+        slug = `${base}-${n}`
+      }
     }
+    throw new Error(`Could not find a free slug for ${title} after ${MAX_SLUG_ATTEMPTS} attempts`)
+  } finally {
+    await unlink(temp).catch(() => {})
   }
-  throw new Error(`Could not find a free slug for ${title} after ${MAX_SLUG_ATTEMPTS} attempts`)
 }
 
 export async function addLogEntry(slug: string, entry: CookLogEntry): Promise<void> {
