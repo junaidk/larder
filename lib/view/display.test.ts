@@ -21,10 +21,15 @@ describe('displayIngredient', () => {
   })
 
   it('converts a measured line', () => {
-    // 500 g converts to 17.6 oz (see convert.test.ts). formatNumber shows a
-    // value of 10 or more as a whole number, so the display rounds to 18.
     const line = parseIngredientLine('- 500 g strong white flour')
-    expect(displayIngredient(line, view('imperial', 1))).toBe('18 oz strong white flour')
+    expect(displayIngredient(line, view('imperial', 1))).toBe('17.6 oz strong white flour')
+  })
+
+  it('keeps one decimal place for a converted ounce amount of 10 or more', () => {
+    // 300 g converts to 10.6 oz. The display must not round this to a
+    // whole number, and 0.6 is not close to a tidy fraction either.
+    const line = parseIngredientLine('- 300 g strong white flour')
+    expect(displayIngredient(line, view('imperial', 1))).toBe('10.6 oz strong white flour')
   })
 
   it('scales and then converts', () => {

@@ -65,6 +65,22 @@ describe('createRecipe', () => {
     await createRecipe('Focaccia', '---\ntitle: Focaccia\n---\n')
     expect(readdirSync(dir)).toEqual(['focaccia.md'])
   })
+
+  it('never overwrites a file that already exists at the target path', async () => {
+    // A double-submitted form, or two concurrent requests for the same
+    // title, must not race past the numeric-suffix guard. The target file
+    // is written directly, with no snapshot of `listSlugs()` in between,
+    // so this proves the guard holds even when the check-then-act window
+    // that a listSlugs()-then-write approach would have is closed.
+    const { createRecipe } = await mod()
+    writeFileSync(join(dir, 'focaccia.md'), 'original content')
+
+    const slug = await createRecipe('Focaccia', '---\ntitle: Focaccia\n---\n')
+
+    expect(slug).toBe('focaccia-2')
+    expect(readFileSync(join(dir, 'focaccia.md'), 'utf8')).toBe('original content')
+    expect(readFileSync(join(dir, 'focaccia-2.md'), 'utf8')).toContain('title: Focaccia')
+  })
 })
 
 describe('readRecipe', () => {

@@ -79,17 +79,30 @@ export async function saveRecipe(recipe: Recipe): Promise<void> {
   await writeAtomic(pathFor(recipe.slug), serializeRecipe(recipe))
 }
 
+const MAX_SLUG_ATTEMPTS = 1000
+
+/**
+ * Create a new recipe file with a slug that no other file holds.
+ *
+ * The exclusive `wx` flag makes the create atomic against a race: the
+ * open fails with `EEXIST` when another writer has already claimed the
+ * path, instead of silently overwriting it the way `rename` would.
+ */
 export async function createRecipe(title: string, markdown: string): Promise<string> {
   const base = slugify(title)
-  const taken = new Set(await listSlugs())
+  await mkdir(recipesDir(), { recursive: true })
+
   let slug = base
-  let n = 2
-  while (taken.has(slug)) {
-    slug = `${base}-${n}`
-    n += 1
+  for (let n = 2; n <= MAX_SLUG_ATTEMPTS; n += 1) {
+    try {
+      await writeFile(pathFor(slug), markdown, { encoding: 'utf8', flag: 'wx' })
+      return slug
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+      slug = `${base}-${n}`
+    }
   }
-  await writeAtomic(pathFor(slug), markdown)
-  return slug
+  throw new Error(`Could not find a free slug for ${title} after ${MAX_SLUG_ATTEMPTS} attempts`)
 }
 
 export async function addLogEntry(slug: string, entry: CookLogEntry): Promise<void> {
@@ -123,7 +136,12 @@ export async function addLogEntry(slug: string, entry: CookLogEntry): Promise<vo
 
 /** Make sure a block ends with one empty line. */
 function appendBlankLine(block: Recipe['blocks'][number]): void {
-  if (block.kind === 'ingredients') return
+  if (block.kind === 'ingredients') {
+    const lines = block.lines
+    const last = lines[lines.length - 1]
+    if (!last || last.type !== 'other' || last.raw !== '') lines.push({ type: 'other', raw: '' })
+    return
+  }
   const lines = block.kind === 'cooklog' ? block.leading : block.lines
   if (lines[lines.length - 1] !== '') lines.push('')
 }
