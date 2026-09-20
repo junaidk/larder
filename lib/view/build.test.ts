@@ -330,6 +330,74 @@ describe('buildMarkdown keeps what the form does not model', () => {
   })
 })
 
+describe('the last three findings before merge', () => {
+  const TODAY = '2026-09-20'
+
+  it('does not re-space a tight method that has a lead block', () => {
+    const source = [
+      '---', 'title: X', '---', '',
+      '# X', '',
+      '## Method', '',
+      '### Stage one', '',
+      '1. A.', '2. B.', '3. C.', '',
+    ].join('\n')
+    const existing = parseRecipe(source, 'x')
+    const state = stateFromRecipe(existing)
+    expect(state.methodLead).toEqual(['### Stage one'])
+    expect(state.methodSteps).toEqual(['A.', 'B.', 'C.'])
+
+    // Edit one step only. The other steps must keep their original,
+    // tight spacing: no blank line inserted between them.
+    state.methodSteps = ['A.', 'B2.', 'C.']
+
+    const out = buildMarkdown(state, existing, TODAY)
+    expect(out).toContain('### Stage one\n\n1. A.\n2. B2.\n3. C.\n')
+  })
+
+  it('rebuilds only the first of two duplicate Ingredients sections', () => {
+    const source = [
+      '---', 'title: X', '---', '',
+      '# X', '',
+      '## Ingredients', '', '- 2 eggs', '',
+      '## Ingredients', '', '- 1 onion', '',
+      '## Method', '', '1. Go.', '',
+    ].join('\n')
+    const existing = parseRecipe(source, 'x')
+    const state = stateFromRecipe(existing)
+    expect(state.ingredientLines).toEqual(['2 eggs'])
+
+    state.ingredientLines = ['3 eggs']
+    const out = buildMarkdown(state, existing, TODAY)
+
+    // The first section takes the edit. The second, untouched section
+    // stays byte-identical to the source: `- 1 onion` is not destroyed.
+    expect(out).toContain('## Ingredients\n\n- 3 eggs\n\n## Ingredients\n\n- 1 onion\n')
+  })
+
+  it('tells apart a prose line from a real ingredient that reads the same', () => {
+    const source = [
+      '---', 'title: X', '---', '',
+      '# X', '',
+      '## Ingredients', '',
+      '2 eggs',
+      '- 2 eggs',
+      '- 1 onion', '',
+      '## Method', '', '1. Go.', '',
+    ].join('\n')
+    const existing = parseRecipe(source, 'x')
+    const state = stateFromRecipe(existing)
+    expect(state.ingredientLines).toEqual(['2 eggs', '2 eggs', '1 onion'])
+
+    // Edit a different ingredient to force a rebuild of the section.
+    state.ingredientLines = ['2 eggs', '2 eggs', '2 onions']
+    const out = buildMarkdown(state, existing, TODAY)
+
+    // The prose line keeps no marker. The real ingredient, which reads
+    // the same, keeps its `- ` marker and so stays a parsed ingredient.
+    expect(out).toContain('## Ingredients\n\n2 eggs\n- 2 eggs\n- 2 onions\n')
+  })
+})
+
 describe('a load-then-save with no edits', () => {
   const DIR = join(process.cwd(), 'lib/recipe/fixtures')
   const FILES = readdirSync(DIR).filter((f) => f.endsWith('.md'))

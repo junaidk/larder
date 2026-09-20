@@ -178,16 +178,22 @@ function editRecipe(state: EditorState, existing: Recipe, fm: Frontmatter): Reci
 
   for (const block of existing.blocks) {
     if (block.kind === 'ingredients') {
+      // A file can hold more than one block of a kind. Only the first one
+      // models the form; every later one passes through unchanged, exactly
+      // like an unmodelled text block.
+      if (sawIngredients) { blocks.push(block); continue }
       sawIngredients = true
       if (!ingredientsChanged) { blocks.push(block); continue }
       if (ingredients.length === 0) continue
       keep(blocks, fresh, ingredientsBlock(block.headingLine, ingredients, proseOf(block)))
     } else if (block.kind === 'method') {
+      if (sawMethod) { blocks.push(block); continue }
       sawMethod = true
       if (!methodChanged) { blocks.push(block); continue }
       if (steps.length === 0 && lead.length === 0) continue
       keep(blocks, fresh, methodBlock(block.headingLine, lead, steps, looseMethod(existing)))
     } else if (block.kind === 'notes') {
+      if (sawNotes) { blocks.push(block); continue }
       sawNotes = true
       if (!notesChanged) { blocks.push(block); continue }
       if (notes === '') continue
@@ -294,14 +300,21 @@ function frontmatterChanged(next: Frontmatter, previous: Frontmatter): boolean {
 
 /**
  * The lines of the `## Ingredients` section that the parser could not read
- * as a list item. The map goes from the trimmed text, which is what the
- * form holds, to the exact source line. The build writes such a line back
- * as the user typed it, with no `- ` marker.
+ * as a list item. The map goes from a line's position among the section's
+ * non-blank lines, which is the same position `stateFromRecipe` gives that
+ * line in `ingredientLines`, to the exact source line. Keying by position
+ * rather than by text tells apart a prose line and a real ingredient that
+ * happen to read the same, such as a prose `2 eggs` next to `- 2 eggs`. The
+ * build writes a prose line back as the user typed it, with no `- ` marker.
  */
-function proseOf(block: Extract<Block, { kind: 'ingredients' }>): Map<string, string> {
-  const prose = new Map<string, string>()
+function proseOf(block: Extract<Block, { kind: 'ingredients' }>): Map<number, string> {
+  const prose = new Map<number, string>()
+  let position = 0
   for (const line of block.lines) {
-    if (line.type === 'other' && line.raw.trim() !== '') prose.set(line.raw.trim(), line.raw)
+    if (line.type !== 'other') { position += 1; continue }
+    if (line.raw.trim() === '') continue
+    prose.set(position, line.raw)
+    position += 1
   }
   return prose
 }
@@ -309,13 +322,13 @@ function proseOf(block: Extract<Block, { kind: 'ingredients' }>): Map<string, st
 function ingredientsBlock(
   headingLine: string,
   lines: string[],
-  prose: Map<string, string>,
+  prose: Map<number, string>,
 ): Block {
   const body: string[] = ['']
-  for (const line of lines) {
+  lines.forEach((line, i) => {
     if (GROUP_RE.test(line)) body.push('', line, '')
-    else body.push(prose.get(line) ?? `- ${line}`)
-  }
+    else body.push(prose.get(i) ?? `- ${line}`)
+  })
   body.push('')
   return { kind: 'ingredients', headingLine, lines: collapse(body).map(toIngredientLine) }
 }
@@ -326,9 +339,15 @@ function toIngredientLine(raw: string): IngredientLine {
   return { type: 'other', raw }
 }
 
-/** True when the source method puts an empty line between two steps. */
+/**
+ * True when the source method puts an empty line between two steps.
+ * The check starts at the first numbered step, so a lead line such as a
+ * `###` sub-heading followed by a blank line does not itself read as loose.
+ */
 function looseMethod(recipe: Recipe): boolean {
-  return /\n[ \t]*\n[ \t]*\d+[.)]\s/.test(methodText(recipe))
+  const text = methodText(recipe)
+  const first = text.search(/^\s*\d+[.)]\s/m)
+  return first !== -1 && /\n[ \t]*\n[ \t]*\d+[.)]\s/.test(text.slice(first))
 }
 
 function methodBlock(headingLine: string, lead: string[], steps: string[], loose: boolean): Block {
