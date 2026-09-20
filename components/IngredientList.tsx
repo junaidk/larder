@@ -58,8 +58,8 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
                   >
                     {/* Same width and alignment as a step numeral, so the dot
                         sits where a number sits in the method. */}
-                    <span aria-hidden className="w-8 shrink-0 text-right text-stone-300">
-                      •
+                    <span aria-hidden className="flex w-8 shrink-0 justify-end pt-[0.45rem]">
+                      <span className="h-2 w-2 rounded-full bg-stone-300" />
                     </span>
                     {p.text ? (
                       // A line the parser could not read has no amount, so it
