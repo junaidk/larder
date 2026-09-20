@@ -150,6 +150,26 @@ export async function addLogEntry(slug: string, entry: CookLogEntry): Promise<vo
   await saveRecipe(recipe)
 }
 
+/**
+ * Remove one cook log entry. `index` counts from the newest entry, in the
+ * same order that `cookLog` returns.
+ */
+export async function deleteLogEntry(slug: string, index: number): Promise<void> {
+  const recipe = await readRecipe(slug)
+  if (!recipe) throw new Error(`No recipe with the slug ${slug}`)
+
+  const block = recipe.blocks.find((b) => b.kind === 'cooklog')
+  if (!block || block.kind !== 'cooklog') {
+    throw new Error(`No cook log entry at position ${index}`)
+  }
+  if (!Number.isInteger(index) || index < 0 || index >= block.entries.length) {
+    throw new Error(`No cook log entry at position ${index}`)
+  }
+
+  block.entries = block.entries.filter((_, i) => i !== index)
+  await saveRecipe(recipe)
+}
+
 /** Make sure a block ends with one empty line. */
 function appendBlankLine(block: Recipe['blocks'][number]): void {
   if (block.kind === 'ingredients') {

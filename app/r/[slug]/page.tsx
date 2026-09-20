@@ -7,7 +7,8 @@ import { displayIngredient } from '@/lib/view/display'
 import { convertMethodText } from '@/lib/units/convert'
 import { readViewParams } from '@/lib/view/params'
 import { ViewControls } from '@/components/ViewControls'
-import { LogDialog } from '@/components/LogDialog'
+import { CookLogForm } from '@/components/CookLogForm'
+import { DeleteLogEntry } from '@/components/DeleteLogEntry'
 import { Stars } from '@/components/Stars'
 
 export const dynamic = 'force-dynamic'
@@ -83,15 +84,18 @@ export default async function RecipePage({ params, searchParams }: Props) {
       <section className="mt-8">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-medium">Cook log</h2>
-          <LogDialog slug={slug} />
         </div>
+        <CookLogForm slug={slug} />
         {log.length === 0 && <p className="mt-3 text-stone-500">No entry yet.</p>}
         <ol className="mt-3 space-y-4">
           {log.map((entry, i) => (
-            <li key={i} className="rounded border border-stone-200 bg-white p-4">
+            <li key={`${entry.date}-${i}`} className="rounded border border-stone-200 bg-white p-4">
               <div className="flex items-center gap-3 text-sm">
                 <time className="font-medium">{entry.date}</time>
                 <Stars rating={entry.rating} />
+                <span className="ml-auto">
+                  <DeleteLogEntry slug={slug} index={i} date={entry.date} />
+                </span>
               </div>
               <pre className="mt-2 whitespace-pre-wrap font-sans text-stone-700">{entry.note}</pre>
             </li>

@@ -215,3 +215,77 @@ describe('listRecipes', () => {
     expect(await listRecipes()).toEqual([])
   })
 })
+
+describe('deleteLogEntry', () => {
+  const base = [
+    '---', 'title: Focaccia', '---', '',
+    '# Focaccia', '',
+    'Dimpled and oily.', '',
+    '## Ingredients', '', '- 500 g flour', '',
+    '## Method', '', '1. Bake it.', '',
+    '## Cook Log', '',
+    '### 2026-09-14 — ★★★★☆', '', 'Too salty.', '',
+    '### 2026-08-02 — ★★★☆☆', '', 'First attempt.', '',
+    '### 2026-07-01', '', 'Trial run.', '',
+  ].join('\n')
+
+  it('removes the newest entry and keeps the others', async () => {
+    const { deleteLogEntry } = await mod()
+    writeFileSync(join(dir, 'focaccia.md'), base)
+    await deleteLogEntry('focaccia', 0)
+
+    const out = readFileSync(join(dir, 'focaccia.md'), 'utf8')
+    expect(out).not.toContain('2026-09-14')
+    expect(out).not.toContain('Too salty.')
+    expect(out).toContain('### 2026-08-02 — ★★★☆☆\n\nFirst attempt.')
+    expect(out).toContain('### 2026-07-01\n\nTrial run.')
+  })
+
+  it('removes an entry from the middle', async () => {
+    const { deleteLogEntry } = await mod()
+    writeFileSync(join(dir, 'focaccia.md'), base)
+    await deleteLogEntry('focaccia', 1)
+
+    const out = readFileSync(join(dir, 'focaccia.md'), 'utf8')
+    expect(out).toContain('2026-09-14')
+    expect(out).not.toContain('First attempt.')
+    expect(out).toContain('Trial run.')
+  })
+
+  it('leaves every other part of the file unchanged', async () => {
+    const { deleteLogEntry } = await mod()
+    writeFileSync(join(dir, 'focaccia.md'), base)
+    await deleteLogEntry('focaccia', 0)
+
+    const out = readFileSync(join(dir, 'focaccia.md'), 'utf8')
+    const head = (t: string) => t.slice(0, t.indexOf('## Cook Log'))
+    expect(head(out)).toBe(head(base))
+  })
+
+  it('keeps the empty section when the last entry goes', async () => {
+    const { deleteLogEntry } = await mod()
+    writeFileSync(join(dir, 'toast.md'), [
+      '---', 'title: Toast', '---', '', '# Toast', '',
+      '## Cook Log', '', '### 2026-09-14', '', 'Fine.', '',
+    ].join('\n'))
+    await deleteLogEntry('toast', 0)
+
+    const out = readFileSync(join(dir, 'toast.md'), 'utf8')
+    expect(out).toContain('## Cook Log')
+    expect(out).not.toContain('2026-09-14')
+    expect(out).toContain('# Toast')
+  })
+
+  it('rejects an index that is out of range', async () => {
+    const { deleteLogEntry } = await mod()
+    writeFileSync(join(dir, 'focaccia.md'), base)
+    await expect(deleteLogEntry('focaccia', 9)).rejects.toThrow(/entry/i)
+    await expect(deleteLogEntry('focaccia', -1)).rejects.toThrow(/entry/i)
+    expect(readFileSync(join(dir, 'focaccia.md'), 'utf8')).toBe(base)
+  })
+
+  it('rejects a slug that tries to escape the folder', async () => {
+    const { deleteLogEntry } = await mod()
+    await expect(deleteLogEntry('../secret', 0)).rejects.toThrow(/slug/i)
+  })
+})

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import type { EditorState } from '@/lib/view/build'
@@ -60,6 +61,10 @@ export function RecipeEditor({
     })
   }
 
+  function addTo(key: 'ingredientLines' | 'methodSteps') {
+    setState((previous) => ({ ...previous, [key]: [...previous[key], ''] }))
+  }
+
   function removeFrom(key: 'ingredientLines' | 'methodSteps', index: number) {
     setState((previous) => {
       const next = previous[key].filter((_, i) => i !== index)
@@ -97,6 +102,12 @@ export function RecipeEditor({
               </button>
             ))}
           </div>
+          <Link
+            href={slug ? `/r/${slug}` : '/'}
+            className="rounded px-3 py-2 text-sm text-stone-600 hover:text-stone-900"
+          >
+            Cancel
+          </Link>
           <button
             type="button"
             onClick={save}
@@ -164,10 +175,19 @@ export function RecipeEditor({
                     />
                     <button type="button" onClick={() => removeFrom('ingredientLines', i)} aria-label={`Remove ingredient ${i + 1}`} className="px-2 text-stone-400 hover:text-stone-700">×</button>
                   </div>
-                  {hint(line) && <p className="mt-0.5 pl-1 text-xs text-stone-500">{hint(line)}</p>}
+                  <p className="mt-0.5 h-4 pl-1 text-xs leading-4 text-stone-500">
+                    {hint(line) || '\u00a0'}
+                  </p>
                 </li>
               ))}
             </ul>
+            <button
+              type="button"
+              onClick={() => addTo('ingredientLines')}
+              className="mt-2 rounded border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:border-stone-400"
+            >
+              + Add ingredient
+            </button>
           </fieldset>
 
           <fieldset>
@@ -187,6 +207,13 @@ export function RecipeEditor({
                 </li>
               ))}
             </ol>
+            <button
+              type="button"
+              onClick={() => addTo('methodSteps')}
+              className="mt-2 rounded border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:border-stone-400"
+            >
+              + Add step
+            </button>
           </fieldset>
 
           <label className="block text-sm">Notes

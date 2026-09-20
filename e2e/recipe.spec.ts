@@ -55,6 +55,23 @@ test('create a recipe, then add a cook log entry', async ({ page }) => {
   // 5. The rest of the file has no change.
   const bodyBefore = created.slice(created.indexOf('# Test Loaf'))
   expect(after).toContain(bodyBefore.trimEnd())
+
+  // 6. A second entry, then delete the newest one.
+  await page.getByRole('button', { name: 'I cooked this' }).click()
+  await page.getByLabel('Date').fill('2026-09-21')
+  await page.getByLabel('Note').fill('Better with less salt.')
+  await page.getByRole('button', { name: 'Save entry' }).click()
+  await expect(page.getByText('Better with less salt.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Delete the entry for 2026-09-21' }).click()
+  await expect(page.getByText('Better with less salt.')).toHaveCount(0)
+
+  // The older entry and the rest of the file survive the delete.
+  await expect(page.getByText('Too salty. Next time 1 tsp.')).toBeVisible()
+  const afterDelete = readFileSync(FILE, 'utf8')
+  expect(afterDelete).not.toContain('2026-09-21')
+  expect(afterDelete).toContain('### 2026-09-20 — ★★★★☆')
+  expect(afterDelete).toContain(bodyBefore.trimEnd())
 })
 
 test('an edit made outside the app appears on the next load', async ({ page }) => {
