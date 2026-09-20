@@ -33,11 +33,11 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
   }
 
   return (
-    <div className="space-y-5 pl-6">
+    <div className="space-y-5">
       {groups.map((group, g) => (
         <div key={g}>
           {group.name && (
-            <h3 className="mb-2 font-sans text-xs font-medium tracking-wide text-stone-500 uppercase">
+            <h3 className="mb-2 pl-12 font-sans text-xs font-medium tracking-wide text-stone-500 uppercase">
               {group.name}
             </h3>
           )}
@@ -52,10 +52,15 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
                     onClick={() => toggle(key)}
                     aria-pressed={struck}
                     aria-label={p.line}
-                    className={`flex w-full gap-2.5 rounded px-1 py-1 text-left hover:bg-stone-100 ${
+                    className={`flex w-full gap-4 rounded px-1 py-1 text-left hover:bg-stone-100 ${
                       struck ? 'opacity-40' : ''
                     }`}
                   >
+                    {/* Same width and alignment as a step numeral, so the dot
+                        sits where a number sits in the method. */}
+                    <span aria-hidden className="w-8 shrink-0 text-right text-stone-300">
+                      •
+                    </span>
                     {p.text ? (
                       // A line the parser could not read has no amount, so it
                       // uses the whole width instead of an empty column.
@@ -68,7 +73,7 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
                       <>
                         <span
                           style={{ width: measureWidth }}
-                          className={`shrink-0 font-sans text-sm ${struck ? 'line-through' : ''}`}
+                          className={`shrink-0 pr-2.5 font-sans text-sm ${struck ? 'line-through' : ''}`}
                         >
                           <span className="font-medium tabular-nums text-stone-900">{p.amount}</span>
                           {p.unit && <span className="text-stone-400"> {p.unit}</span>}
