@@ -88,7 +88,7 @@ describe('parseIngredientLine', () => {
     expect(got.item).toBe('')
   })
 
-  it('treats a temperature word as text, not a unit', () => {
+  it('reads the bare letter c as cups, not Celsius', () => {
     const got = parseIngredientLine('- 2 c plain flour')
     expect(got.unit).toBe('cup')
   })

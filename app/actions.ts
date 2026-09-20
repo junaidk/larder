@@ -16,6 +16,14 @@ export async function addLogEntryAction(slug: string, form: FormData): Promise<A
 
   const note = String(form.get('note') ?? '').trim()
   if (!note) return { ok: false, error: 'Write a note before you save.' }
+  // A line that starts with # reads as a heading. Such a line splits the
+  // cook log on the next parse, so the page then shows fewer entries.
+  if (note.split(/\r?\n/).some((line) => line.startsWith('#'))) {
+    return {
+      ok: false,
+      error: 'A note cannot have a line that starts with #. Start the line with a word instead.',
+    }
+  }
 
   const ratingRaw = String(form.get('rating') ?? '').trim()
   const rating = ratingRaw ? Number(ratingRaw) : null
