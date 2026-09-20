@@ -24,7 +24,7 @@ export const UNITS: UnitDef[] = [
   { id: 'tsp', dimension: 'volume', system: 'both', base: 5, aliases: ['tsp', 'tsps', 'teaspoon', 'teaspoons', 't'], plural: 'tsp' },
   { id: 'tbsp', dimension: 'volume', system: 'both', base: 15, aliases: ['tbsp', 'tbsps', 'tbs', 'tablespoon', 'tablespoons', 'T'], plural: 'tbsp' },
   { id: 'floz', dimension: 'volume', system: 'imperial', base: 29.5735295625, aliases: ['floz', 'fl oz', 'fluid ounce', 'fluid ounces'] },
-  { id: 'cup', dimension: 'volume', system: 'imperial', base: 240, aliases: ['cup', 'cups'], plural: 'cups' },
+  { id: 'cup', dimension: 'volume', system: 'imperial', base: 240, aliases: ['cup', 'cups', 'c'], plural: 'cups' },
   { id: 'pint', dimension: 'volume', system: 'imperial', base: 473.176473, aliases: ['pint', 'pints', 'pt'], plural: 'pints' },
 
   // temperature. `base` has no meaning here. convert.ts holds the formula.
