@@ -1,8 +1,9 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { buildMarkdown, emptyState, stateFromRecipe } from '@/lib/view/build'
 import { parseRecipe } from '@/lib/recipe/parse'
+import { serializeRecipe } from '@/lib/recipe/serialize'
 
 describe('buildMarkdown', () => {
   it('writes a whole file from an empty state', () => {
@@ -220,5 +221,153 @@ describe('stateFromRecipe', () => {
   it('keeps a line that the parser cannot read', () => {
     const source = '---\ntitle: X\n---\n\n## Ingredients\n\n- salt and pepper\n'
     expect(stateFromRecipe(parseRecipe(source, 'x')).ingredientLines).toEqual(['salt and pepper'])
+  })
+})
+
+describe('buildMarkdown keeps what the form does not model', () => {
+  const TODAY = '2026-09-20'
+
+  it('keeps the prose between the Cook Log heading and the first entry', () => {
+    const source = [
+      '---', 'title: X', '---', '',
+      '# X', '',
+      '## Method', '', '1. Go.', '',
+      '## Cook Log', '',
+      'I keep the oven notes here.', '',
+      '### 2026-08-02 — ★★★★☆', '', 'Good.', '',
+    ].join('\n')
+    const existing = parseRecipe(source, 'x')
+    const state = stateFromRecipe(existing)
+    state.title = 'Y'
+
+    const out = buildMarkdown(state, existing, TODAY)
+    expect(out).toContain('## Cook Log\n\nI keep the oven notes here.\n\n### 2026-08-02 — ★★★★☆\n\nGood.\n')
+  })
+
+  it('keeps a Cook Log that holds prose but no dated entry', () => {
+    const source = [
+      '---', 'title: X', '---', '',
+      '# X', '',
+      '## Method', '', '1. Go.', '',
+      '## Cook Log', '', 'Not cooked yet.', '',
+    ].join('\n')
+    const existing = parseRecipe(source, 'x')
+
+    const out = buildMarkdown(stateFromRecipe(existing), existing, TODAY)
+    expect(out).toContain('## Cook Log\n\nNot cooked yet.\n')
+  })
+
+  it('keeps a method sub-heading and a wrapped step, with no renumbering', () => {
+    const method = [
+      '## Method', '',
+      '### For the sauce', '',
+      '1. Sweat the onion',
+      '   until soft.',
+      '2. Add tomato.', '',
+    ]
+    const source = ['---', 'title: X', 'updated: 2026-09-20', '---', '', '# X', '', ...method].join('\n')
+    const existing = parseRecipe(source, 'x')
+
+    const state = stateFromRecipe(existing)
+    expect(state.methodSteps).toEqual(['Sweat the onion\n   until soft.', 'Add tomato.'])
+    expect(state.methodLead).toEqual(['### For the sauce'])
+
+    expect(buildMarkdown(state, existing, TODAY)).toBe(source)
+  })
+
+  it('keeps Windows line endings', () => {
+    const source = [
+      '---', 'title: X', '---', '',
+      '# X', '',
+      '## Ingredients', '', '- 2 eggs', '',
+      '## Method', '', '1. Go.', '',
+    ].join('\n').replace(/\n/g, '\r\n')
+    const existing = parseRecipe(source, 'x')
+    const state = stateFromRecipe(existing)
+    state.methodSteps = ['Go.', 'Rest.']
+
+    const out = buildMarkdown(state, existing, TODAY)
+    expect(out).toContain('\r\n')
+    expect(out.replace(/\r\n/g, '')).not.toContain('\n')
+    expect(out).toContain('## Method\r\n\r\n1. Go.\r\n2. Rest.\r\n')
+  })
+
+  it('does not put a list marker on a prose line inside Ingredients', () => {
+    const source = [
+      '---', 'title: X', '---', '',
+      '# X', '',
+      '## Ingredients', '',
+      'All weights are for the dough.', '',
+      '- 500 g flour', '',
+      '## Method', '', '1. Go.', '',
+    ].join('\n')
+    const existing = parseRecipe(source, 'x')
+    const state = stateFromRecipe(existing)
+    state.ingredientLines = [...state.ingredientLines, '2 eggs']
+
+    const out = buildMarkdown(state, existing, TODAY)
+    expect(out).toContain('All weights are for the dough.')
+    expect(out).not.toContain('- All weights are for the dough.')
+    expect(out).toContain('- 2 eggs')
+  })
+
+  it('puts a new Method section before the Cook Log, with an empty line above it', () => {
+    const source = [
+      '---', 'title: X', '---', '',
+      '# X', '',
+      '## Ingredients', '', '- 2 eggs', '',
+      '## Cook Log', '', '### 2026-08-02 — ★★★★☆', '', 'Good.', '',
+    ].join('\n')
+    const existing = parseRecipe(source, 'x')
+    const state = stateFromRecipe(existing)
+    state.methodSteps = ['Mix it.']
+
+    const out = buildMarkdown(state, existing, TODAY)
+    expect(out.indexOf('## Method')).toBeGreaterThan(-1)
+    expect(out.indexOf('## Method')).toBeLessThan(out.indexOf('## Cook Log'))
+    expect(out).toContain('- 2 eggs\n\n## Method\n\n1. Mix it.\n\n## Cook Log\n')
+    expect(out).not.toContain('Good.\n## Method')
+  })
+})
+
+describe('a load-then-save with no edits', () => {
+  const DIR = join(process.cwd(), 'lib/recipe/fixtures')
+  const FILES = readdirSync(DIR).filter((f) => f.endsWith('.md'))
+
+  /** The app owns `updated`. Every save writes it. Drop it from a compare. */
+  function withoutUpdated(text: string): string {
+    return text.replace(/^updated: \d{4}-\d{2}-\d{2}[ \t]*\r?\n/m, '')
+  }
+
+  it('covers all seven fixtures', () => {
+    expect(FILES).toHaveLength(7)
+  })
+
+  it.each(FILES)('returns %s unchanged apart from the updated line', (name) => {
+    const source = readFileSync(join(DIR, name), 'utf8')
+    const recipe = parseRecipe(source, 'fixture')
+    const state = stateFromRecipe(recipe)
+    const out = buildMarkdown(state, recipe, '2026-09-20')
+
+    // A file with no frontmatter gains a frontmatter block, because the app
+    // owns the title and the dates. Everything below the fence stays the same.
+    const expected = recipe.frontmatterRaw === null
+      ? `---\ntitle: ${state.title}\n---\n\n${source}`
+      : source
+
+    expect(withoutUpdated(out)).toBe(withoutUpdated(expected))
+  })
+
+  // The editor shows this text and `saveRecipeAction` parses the same text
+  // before it writes. The two must give the same bytes.
+  it.each(FILES)('writes back the preview of %s without a change', (name) => {
+    const source = readFileSync(join(DIR, name), 'utf8')
+    const recipe = parseRecipe(source, 'fixture')
+    const state = stateFromRecipe(recipe)
+    state.title = 'A New Title'
+    state.methodSteps = [...state.methodSteps, 'Rest for ten minutes.']
+
+    const out = buildMarkdown(state, recipe, '2026-09-21')
+    expect(serializeRecipe(parseRecipe(out, 'fixture'))).toBe(out)
   })
 })
