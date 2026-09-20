@@ -57,6 +57,12 @@ describe('convertAmount leaves a unit alone', () => {
   it('returns the input for a unit that it does not know', () => {
     expect(convertAmount(2, 'glug', 'imperial')).toEqual({ value: 2, unit: 'glug' })
   })
+
+  it('keeps a temperature that is already in the target system', () => {
+    // The rounding step for C is 10. A round here would show 215C as 220C.
+    expect(convertAmount(215, 'C', 'metric')).toEqual({ value: 215, unit: 'C' })
+    expect(convertAmount(415, 'F', 'imperial')).toEqual({ value: 415, unit: 'F' })
+  })
 })
 
 describe('convertAmount promotes within a system that already matches the target', () => {

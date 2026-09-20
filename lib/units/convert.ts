@@ -59,6 +59,9 @@ export function convertAmount(
   if (unit.system === 'both' || unit.dimension === 'count') return { value, unit: unitId }
 
   if (unit.system === target) {
+    // A temperature has no promotion. Rounding it here would move the
+    // number, because the step for C is 10. Give the value back as it is.
+    if (unit.dimension === 'temperature') return { value, unit: unitId }
     // Already the right system. Still promote to a larger unit when the
     // number has grown past a threshold, so an imperial recipe promotes
     // oz to lb, floz to cup and cup to pint even with no system change.
