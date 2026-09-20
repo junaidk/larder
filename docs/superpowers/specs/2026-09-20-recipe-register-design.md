@@ -19,7 +19,7 @@ The work is complete when the app meets these criteria:
 | 3 | The app keeps every part of a file that the user did not change. |
 | 4 | The user finds a recipe by text, by tag or by rating. |
 | 5 | The user reads amounts in metric or in imperial units. |
-| 6 | The user scales a recipe to a different number of servings. |
+| 6 | The user scales a recipe by a factor. A `?serves=` link scales to a number of servings. |
 | 7 | The user adds a dated note with a rating to a recipe. |
 
 ## 2. Constraints
@@ -285,13 +285,18 @@ rule.
 
 Scale changes the display only. The app never writes a scaled value to a file.
 
-The user sets the factor in three ways:
-
-1. The preset buttons `1/2`, `2x` and `3x`.
-2. A free text factor box.
-3. A "scale to N servings" box. This box needs the `serves` field.
+The user sets the factor in one box. The user types a factor such as `1.5`,
+or picks `1/2`, `2` or `3` from the list that the box offers.
 
 The factor is in the URL as `?scale=0.5`.
+
+The URL also accepts `?serves=4`, which scales to that number of servings and
+needs the `serves` field. No control writes it. A link made by an earlier
+version of the app therefore still scales.
+
+An earlier version of this design had three controls: preset buttons, a text
+box and a servings box. Together they made the row of controls wrap onto a
+second line. The user asked for one box, and for the servings box to go.
 
 The app shows a scaled amount as a fraction, not as a decimal. The formatter
 prefers halves, thirds, quarters and eighths. These are the marks on real

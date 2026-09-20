@@ -73,7 +73,6 @@ export default async function RecipePage({ params, searchParams }: Props) {
       </header>
 
       <RecipeLayout
-        serves={fm.serves}
         ingredients={
           <section className="recipe-ingredients">
             <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">

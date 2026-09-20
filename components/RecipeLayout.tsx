@@ -13,11 +13,9 @@ export type Columns = 'one' | 'two'
  * one piece of state the page needs: how many columns to use.
  */
 export function RecipeLayout({
-  serves,
   ingredients,
   body,
 }: {
-  serves: number | null
   ingredients: ReactNode
   body: ReactNode
 }) {
@@ -38,7 +36,7 @@ export function RecipeLayout({
     <>
       <div className="no-print my-8 border-y border-stone-200 py-4">
         <Suspense fallback={null}>
-          <ViewControls serves={serves} columns={columns} onColumns={choose} />
+          <ViewControls columns={columns} onColumns={choose} />
         </Suspense>
       </div>
 

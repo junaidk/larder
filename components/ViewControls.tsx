@@ -9,11 +9,9 @@ const STORAGE_KEY = 'recipe-register:units'
 const COLUMNS_KEY = 'recipe-register:columns'
 
 export function ViewControls({
-  serves,
   columns,
   onColumns,
 }: {
-  serves: number | null
   columns: 'one' | 'two'
   onColumns: (next: 'one' | 'two') => void
 }) {
@@ -86,29 +84,21 @@ export function ViewControls({
         ))}
 
         <span className="ml-4 text-sm text-stone-500">Scale</span>
-        {[['1/2', '1/2'], ['2', '2x'], ['3', '3x']].map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => set({ scale: scale === value ? null : value, serves: null })}
-            aria-pressed={scale === value}
-            className={`rounded px-3 py-1 text-sm ${
-              scale === value ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-700'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-
         <input
           type="text"
           inputMode="decimal"
+          list="scale-presets"
           aria-label="Scale factor"
-          placeholder="factor"
+          placeholder="1"
           value={factorText}
           onChange={(e) => handleFactorChange(e.target.value)}
-          className="w-16 rounded border border-stone-300 px-2 py-1 text-sm"
+          className="w-24 rounded border border-stone-300 px-2 py-1 text-sm"
         />
+        <datalist id="scale-presets">
+          <option value="1/2" />
+          <option value="2" />
+          <option value="3" />
+        </datalist>
 
         {/* Only a wide screen has room for two columns. */}
         <span className="ml-4 hidden text-sm text-stone-500 lg:inline">Layout</span>
@@ -141,19 +131,6 @@ export function ViewControls({
           </button>
         )}
 
-        {serves !== null && (
-          <label className="ml-2 flex items-center gap-2 text-sm text-stone-500">
-            Serves
-            <input
-              type="number"
-              min={1}
-              max={200}
-              value={wantedServes || serves}
-              onChange={(e) => set({ serves: e.target.value, scale: null })}
-              className="w-20 rounded border border-stone-300 px-2 py-1"
-            />
-          </label>
-        )}
       </div>
 
     </div>
