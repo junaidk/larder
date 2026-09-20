@@ -34,7 +34,9 @@ test('create a recipe, then add a cook log entry', async ({ page }) => {
 
   // The scale and unit controls work on the view only.
   await page.getByRole('button', { name: 'Imperial' }).click()
-  await expect(page.getByText('17.6 oz strong white flour')).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '17.6 oz strong white flour' }),
+  ).toBeVisible()
   await expect(page.getByText('425F')).toBeVisible()
   expect(readFileSync(FILE, 'utf8')).toBe(created)
 

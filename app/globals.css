@@ -1,1 +1,31 @@
 @import "tailwindcss";
+
+@theme {
+  /* Inter for the controls. Source Serif for anything you read. It is the
+     closest freely licensed face to Charter, which Medium uses. Charter
+     itself ships with macOS, so it comes first when it is there. */
+  --font-sans: var(--font-sans-face), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: Charter, var(--font-serif-face), "Bitstream Charter", Georgia, serif;
+}
+
+/* A recipe on paper: the text only, black on white, no controls. */
+@media print {
+  .no-print { display: none !important; }
+
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 12pt;
+  }
+
+  main { max-width: none !important; padding: 0 !important; }
+
+  /* Keep a step or an ingredient from breaking across two pages. */
+  li, h2, h3 { break-inside: avoid; }
+  h2 { break-after: avoid; }
+
+  a { text-decoration: none; color: #000 !important; }
+
+  /* The two columns become one, so nothing is squeezed into a narrow strip. */
+  .print-single-column { display: block !important; }
+}

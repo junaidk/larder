@@ -62,13 +62,28 @@ function reexpress(value: number, fromUnit: string, toUnit: string): number {
   return roundForUnit((value * from.base) / to.base, toUnit)
 }
 
+/** The parts of one ingredient, ready to style each on its own. */
+export interface IngredientParts {
+  amount: string
+  unit: string
+  item: string
+  prep: string
+  /** Set only for a line the parser could not read. The other parts are then empty. */
+  text: string
+}
+
+const EMPTY: IngredientParts = { amount: '', unit: '', item: '', prep: '', text: '' }
+
 /**
- * Build the text for one ingredient on the screen.
- * A text line always comes back with no change.
+ * Split one ingredient into its display parts.
+ * A line the parser could not read comes back whole, in `text`, with no change.
  */
-export function displayIngredient(ingredient: Ingredient, options: ViewOptions): string {
+export function displayIngredientParts(
+  ingredient: Ingredient,
+  options: ViewOptions,
+): IngredientParts {
   const source = ingredientText(ingredient.rawLine)
-  if (ingredient.kind === 'text' || !ingredient.quantity) return source
+  if (ingredient.kind === 'text' || !ingredient.quantity) return { ...EMPTY, text: source }
 
   const low = transform(ingredient.quantity.value, ingredient.unit, options)
 
@@ -92,8 +107,22 @@ export function displayIngredient(ingredient: Ingredient, options: ViewOptions):
     amount = formatDisplayAmount(low.value)
   }
 
-  const unitWord = unitId ? displayUnit(unitId, pluralValue) : ''
-  const parts = [amount, unitWord, ingredient.item].filter(Boolean)
-  const head = parts.join(' ')
-  return ingredient.prep ? `${head}, ${ingredient.prep}` : head
+  return {
+    amount,
+    unit: unitId ? displayUnit(unitId, pluralValue) : '',
+    item: ingredient.item ?? '',
+    prep: ingredient.prep ?? '',
+    text: '',
+  }
+}
+
+/**
+ * Build the text for one ingredient on the screen.
+ * A text line always comes back with no change.
+ */
+export function displayIngredient(ingredient: Ingredient, options: ViewOptions): string {
+  const p = displayIngredientParts(ingredient, options)
+  if (p.text) return p.text
+  const head = [p.amount, p.unit, p.item].filter(Boolean).join(' ')
+  return p.prep ? `${head}, ${p.prep}` : head
 }

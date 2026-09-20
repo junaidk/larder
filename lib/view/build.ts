@@ -1,4 +1,5 @@
 import type { Block, Frontmatter, IngredientLine, Recipe } from '@/lib/recipe/types'
+import { splitMethodText } from '@/lib/view/method'
 import { emptyFrontmatter } from '@/lib/recipe/types'
 import { serializeFrontmatter } from '@/lib/recipe/frontmatter'
 import { ingredientText, parseIngredientLine } from '@/lib/recipe/ingredient'
@@ -40,29 +41,9 @@ const GROUP_RE = /^###\s+/
 const LIST_RE = /^\s*[-*+]\s+\S/
 const TITLE_RE = /^#\s+/
 /** A numbered step starts here. Every other line belongs to the step above. */
-const STEP_RE = /^\s*\d+[.)]\s/
-
 /** Read the method as a lead block and a list of steps. */
 function readMethod(recipe: Recipe): { lead: string[]; steps: string[] } {
-  const text = methodText(recipe)
-  if (text === '') return { lead: [], steps: [] }
-
-  const lead: string[] = []
-  const steps: string[] = []
-  for (const line of text.split('\n')) {
-    if (STEP_RE.test(line)) steps.push(line.replace(STEP_RE, ''))
-    else if (steps.length === 0) lead.push(line)
-    else steps[steps.length - 1] += `\n${line}`
-  }
-
-  while (lead.length > 0 && lead[lead.length - 1].trim() === '') lead.pop()
-  return { lead, steps: steps.map(dropTrailingBlanks) }
-}
-
-function dropTrailingBlanks(step: string): string {
-  const lines = step.split('\n')
-  while (lines.length > 1 && lines[lines.length - 1].trim() === '') lines.pop()
-  return lines.join('\n')
+  return splitMethodText(methodText(recipe))
 }
 
 export function stateFromRecipe(recipe: Recipe): EditorState {

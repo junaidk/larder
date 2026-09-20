@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { displayIngredient, DEFAULT_VIEW } from '@/lib/view/display'
+import { displayIngredient, displayIngredientParts, DEFAULT_VIEW } from '@/lib/view/display'
 import { parseIngredientLine } from '@/lib/recipe/ingredient'
 
 const view = (system: 'metric' | 'imperial', factor: number) => ({ system, factor })
@@ -81,5 +81,62 @@ describe('displayIngredient reconciles a range onto one unit', () => {
     // The low end must be re-expressed in pounds, not left in ounces.
     const line = parseIngredientLine('- 850-970 g flour')
     expect(displayIngredient(line, view('imperial', 1))).toBe('1.9-2.1 lb flour')
+  })
+})
+
+describe('displayIngredientParts', () => {
+  it('splits a measured line into its parts', () => {
+    const line = parseIngredientLine('- 500 g strong white flour')
+    expect(displayIngredientParts(line, DEFAULT_VIEW)).toEqual({
+      amount: '500', unit: 'g', item: 'strong white flour', prep: '', text: '',
+    })
+  })
+
+  it('keeps the prep apart', () => {
+    const line = parseIngredientLine('- 3 cloves garlic, minced')
+    expect(displayIngredientParts(line, view('metric', 2))).toEqual({
+      amount: '6', unit: 'cloves', item: 'garlic', prep: 'minced', text: '',
+    })
+  })
+
+  it('gives a counted line an empty unit', () => {
+    const line = parseIngredientLine('- 2 eggs')
+    expect(displayIngredientParts(line, DEFAULT_VIEW)).toEqual({
+      amount: '2', unit: '', item: 'eggs', prep: '', text: '',
+    })
+  })
+
+  it('returns a text line whole, in text', () => {
+    const line = parseIngredientLine('- a good pinch of sea salt')
+    expect(displayIngredientParts(line, view('imperial', 2))).toEqual({
+      amount: '', unit: '', item: '', prep: '', text: 'a good pinch of sea salt',
+    })
+  })
+
+  it('scales and converts the amount, as the joined form does', () => {
+    const line = parseIngredientLine('- 500 g flour')
+    const parts = displayIngredientParts(line, view('imperial', 2))
+    expect(parts.amount).toBe('2.2')
+    expect(parts.unit).toBe('lb')
+  })
+
+  it('agrees with displayIngredient on every shape', () => {
+    const lines = [
+      '- 500 g strong white flour', '- 3 cloves garlic, minced', '- 2 eggs',
+      '- a good pinch of sea salt', '- 2-3 sprigs thyme', '- 1 tsp fine salt',
+      '- ½ lemon, juiced',
+    ]
+    const views = [DEFAULT_VIEW, view('imperial', 1), view('metric', 0.5), view('imperial', 3)]
+    for (const raw of lines) {
+      for (const v of views) {
+        const ing = parseIngredientLine(raw)
+        const p = displayIngredientParts(ing, v)
+        const joined = p.text
+          ? p.text
+          : [[p.amount, p.unit, p.item].filter(Boolean).join(' '), p.prep]
+              .filter(Boolean).join(', ')
+        expect(joined).toBe(displayIngredient(ing, v))
+      }
+    }
   })
 })

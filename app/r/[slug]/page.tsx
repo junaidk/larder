@@ -3,12 +3,15 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { readRecipe } from '@/lib/storage/index'
 import { cookLog, ingredientGroups, methodText, notesText } from '@/lib/recipe/access'
-import { displayIngredient } from '@/lib/view/display'
+import { displayIngredient, displayIngredientParts } from '@/lib/view/display'
 import { convertMethodText } from '@/lib/units/convert'
+import { splitMethodText } from '@/lib/view/method'
 import { readViewParams } from '@/lib/view/params'
 import { ViewControls } from '@/components/ViewControls'
 import { CookLogForm } from '@/components/CookLogForm'
 import { DeleteLogEntry } from '@/components/DeleteLogEntry'
+import { IngredientList } from '@/components/IngredientList'
+import { MethodSteps } from '@/components/MethodSteps'
 import { Stars } from '@/components/Stars'
 
 export const dynamic = 'force-dynamic'
@@ -24,81 +27,109 @@ export default async function RecipePage({ params, searchParams }: Props) {
   if (!recipe) notFound()
 
   const view = readViewParams(await searchParams, recipe.frontmatter.serves)
-  const groups = ingredientGroups(recipe)
+  const fm = recipe.frontmatter
   const log = cookLog(recipe)
   const notes = notesText(recipe)
+  const lead = recipe.blocks.find((b) => b.kind === 'text')
+
+  // The parts are built here, on the server, so the tickable lists stay
+  // small client components holding plain strings.
+  const groups = ingredientGroups(recipe).map((g) => ({
+    name: g.name,
+    ingredients: g.ingredients.map((i) => ({
+      ...displayIngredientParts(i, view),
+      line: displayIngredient(i, view),
+    })),
+  }))
+
+  const method = splitMethodText(convertMethodText(methodText(recipe), view.system))
+
+  // Everything after the "# Title" line, which the heading already shows.
+  const description = lead && lead.kind === 'text'
+    ? lead.lines.filter((l) => !l.startsWith('# ')).join('\n').trim()
+    : ''
 
   return (
-    <main className="mx-auto max-w-3xl p-6 sm:p-8">
-      <nav className="mb-6 flex items-center justify-between text-sm">
+    <main className="mx-auto max-w-5xl p-6 sm:p-8">
+      <nav className="no-print mb-8 flex items-center justify-between font-sans text-sm">
         <Link href="/" className="text-stone-500 hover:underline">All recipes</Link>
         <Link href={`/r/${slug}/edit`} className="text-stone-500 hover:underline">Edit</Link>
       </nav>
 
-      <h1 className="text-3xl font-semibold">{recipe.frontmatter.title || slug}</h1>
+      <header className="max-w-2xl">
+        <h1 className="font-serif text-4xl leading-tight font-semibold tracking-tight text-stone-900">
+          {fm.title || slug}
+        </h1>
 
-      <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-stone-600">
-        {recipe.frontmatter.serves !== null && <div><dt className="inline">Serves </dt><dd className="inline">{recipe.frontmatter.serves}</dd></div>}
-        {recipe.frontmatter.prep_time && <div><dt className="inline">Prep </dt><dd className="inline">{recipe.frontmatter.prep_time}</dd></div>}
-        {recipe.frontmatter.cook_time && <div><dt className="inline">Cook </dt><dd className="inline">{recipe.frontmatter.cook_time}</dd></div>}
-        {recipe.frontmatter.source && <div><dt className="inline">Source </dt><dd className="inline">{recipe.frontmatter.source}</dd></div>}
-      </dl>
+        {description && (
+          <p className="mt-4 font-serif text-lg leading-relaxed text-stone-600">{description}</p>
+        )}
 
-      <div className="my-6 border-y border-stone-200 py-4">
+        <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 font-sans text-sm text-stone-500">
+          {fm.serves !== null && <div><dt className="inline">Serves </dt><dd className="inline text-stone-700">{fm.serves}</dd></div>}
+          {fm.prep_time && <div><dt className="inline">Prep </dt><dd className="inline text-stone-700">{fm.prep_time}</dd></div>}
+          {fm.cook_time && <div><dt className="inline">Cook </dt><dd className="inline text-stone-700">{fm.cook_time}</dd></div>}
+          {fm.source && <div><dt className="inline">Source </dt><dd className="inline text-stone-700">{fm.source}</dd></div>}
+        </dl>
+      </header>
+
+      <div className="no-print my-8 border-y border-stone-200 py-4">
         <Suspense fallback={null}>
-          <ViewControls serves={recipe.frontmatter.serves} />
+          <ViewControls serves={fm.serves} />
         </Suspense>
       </div>
 
-      <section>
-        <h2 className="text-xl font-medium">Ingredients</h2>
-        {groups.map((group, i) => (
-          <div key={i} className="mt-3">
-            {group.name && <h3 className="text-sm font-medium text-stone-600">{group.name}</h3>}
-            <ul className="mt-1 space-y-1">
-              {group.ingredients.map((ingredient, j) => (
-                <li key={j} className="flex gap-2">
-                  <span className="text-stone-300">·</span>
-                  <span>{displayIngredient(ingredient, view)}</span>
+      {/* Ingredients stay beside the method on a wide screen, and stick while
+          you scroll, so an amount is always in view during a step. */}
+      <div className="print-single-column grid gap-10 lg:grid-cols-[19rem_1fr] lg:gap-14">
+        <section className="lg:sticky lg:top-8 lg:self-start">
+          <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
+            Ingredients
+          </h2>
+          <IngredientList groups={groups} />
+        </section>
+
+        <div className="min-w-0">
+          <section>
+            <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
+              Method
+            </h2>
+            <MethodSteps lead={method.lead} steps={method.steps} />
+          </section>
+
+          {notes && (
+            <section className="mt-10 rounded-lg border border-stone-200 bg-white p-5">
+              <h2 className="mb-3 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
+                Notes
+              </h2>
+              <div className="font-serif leading-relaxed whitespace-pre-wrap text-stone-700">
+                {notes}
+              </div>
+            </section>
+          )}
+
+          <section className="no-print mt-12">
+            <CookLogForm slug={slug} />
+            {log.length === 0 && <p className="mt-3 font-sans text-sm text-stone-500">No entry yet.</p>}
+            <ol className="mt-4 space-y-4">
+              {log.map((entry, i) => (
+                <li key={`${entry.date}-${i}`} className="rounded-lg border border-stone-200 bg-white p-4">
+                  <div className="flex items-center gap-3 font-sans text-sm">
+                    <time className="font-medium text-stone-700">{entry.date}</time>
+                    <Stars rating={entry.rating} />
+                    <span className="ml-auto">
+                      <DeleteLogEntry slug={slug} index={i} date={entry.date} />
+                    </span>
+                  </div>
+                  <div className="mt-2 font-serif leading-relaxed whitespace-pre-wrap text-stone-700">
+                    {entry.note}
+                  </div>
                 </li>
               ))}
-            </ul>
-          </div>
-        ))}
-      </section>
-
-      <section className="mt-8">
-        <h2 className="text-xl font-medium">Method</h2>
-        <pre className="mt-3 whitespace-pre-wrap font-sans">
-          {convertMethodText(methodText(recipe), view.system)}
-        </pre>
-      </section>
-
-      {notes && (
-        <section className="mt-8">
-          <h2 className="text-xl font-medium">Notes</h2>
-          <pre className="mt-3 whitespace-pre-wrap font-sans">{notes}</pre>
-        </section>
-      )}
-
-      <section className="mt-8">
-        <CookLogForm slug={slug} />
-        {log.length === 0 && <p className="mt-3 text-stone-500">No entry yet.</p>}
-        <ol className="mt-3 space-y-4">
-          {log.map((entry, i) => (
-            <li key={`${entry.date}-${i}`} className="rounded border border-stone-200 bg-white p-4">
-              <div className="flex items-center gap-3 text-sm">
-                <time className="font-medium">{entry.date}</time>
-                <Stars rating={entry.rating} />
-                <span className="ml-auto">
-                  <DeleteLogEntry slug={slug} index={i} date={entry.date} />
-                </span>
-              </div>
-              <pre className="mt-2 whitespace-pre-wrap font-sans text-stone-700">{entry.note}</pre>
-            </li>
-          ))}
-        </ol>
-      </section>
+            </ol>
+          </section>
+        </div>
+      </div>
     </main>
   )
 }
