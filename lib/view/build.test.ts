@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { buildMarkdown, emptyState, stateFromRecipe } from '@/lib/view/build'
 import { parseRecipe } from '@/lib/recipe/parse'
@@ -98,6 +100,101 @@ describe('buildMarkdown', () => {
     state.ingredientLines = ['500 g flour', '### For the topping', '3 tbsp olive oil']
     const out = buildMarkdown(state, null, '2026-09-20')
     expect(out).toContain('- 500 g flour\n\n### For the topping\n\n- 3 tbsp olive oil')
+  })
+
+  it('keeps an unmodelled section between Ingredients and Method in its original position', () => {
+    const source = [
+      '---', 'title: X', '---', '',
+      '# X', '',
+      '## Ingredients', '', '- 2 eggs', '',
+      '## Equipment', '', 'A stand mixer.', '',
+      '## Method', '', '1. Go.', '',
+    ].join('\n')
+    const existing = parseRecipe(source, 'x')
+    const state = stateFromRecipe(existing)
+
+    const out = buildMarkdown(state, existing, '2026-09-21')
+
+    expect(out).toContain('## Equipment\n\nA stand mixer.\n')
+    const ingredientsAt = out.indexOf('## Ingredients')
+    const equipmentAt = out.indexOf('## Equipment')
+    const methodAt = out.indexOf('## Method')
+    expect(ingredientsAt).toBeGreaterThan(-1)
+    expect(equipmentAt).toBeGreaterThan(ingredientsAt)
+    expect(methodAt).toBeGreaterThan(equipmentAt)
+  })
+
+  it('keeps two unmodelled sections, one before Ingredients and one after Cook Log', () => {
+    const source = [
+      '---', 'title: X', '---', '',
+      '# X', '',
+      '## Intro', '', 'Some background.', '',
+      '## Ingredients', '', '- 2 eggs', '',
+      '## Method', '', '1. Go.', '',
+      '## Cook Log', '', '### 2026-08-02 — ★★★★☆', '', 'Good.', '',
+      '## Wine pairing', '', 'A dry white wine.', '',
+    ].join('\n')
+    const existing = parseRecipe(source, 'x')
+    const state = stateFromRecipe(existing)
+
+    const out = buildMarkdown(state, existing, '2026-09-21')
+
+    expect(out).toContain('## Intro\n\nSome background.\n')
+    expect(out).toContain('## Wine pairing\n\nA dry white wine.\n')
+
+    const introAt = out.indexOf('## Intro')
+    const ingredientsAt = out.indexOf('## Ingredients')
+    const cookLogAt = out.indexOf('## Cook Log')
+    const winePairingAt = out.indexOf('## Wine pairing')
+    expect(introAt).toBeGreaterThan(-1)
+    expect(ingredientsAt).toBeGreaterThan(introAt)
+    expect(winePairingAt).toBeGreaterThan(cookLogAt)
+  })
+
+  it('keeps the title of a file with no frontmatter on a load-then-save', () => {
+    const source = readFileSync(join(process.cwd(), 'lib/recipe/fixtures/no-frontmatter.md'), 'utf8')
+    const existing = parseRecipe(source, 'cheese-toast')
+    const state = stateFromRecipe(existing)
+    expect(state.title).toBe('Cheese Toast')
+
+    const out = buildMarkdown(state, existing, '2026-09-21')
+    expect(out).toContain('title: Cheese Toast')
+    expect(out).toContain('# Cheese Toast\n')
+  })
+
+  it('builds a brand new recipe from the template, unchanged, when existing is null', () => {
+    const state = emptyState()
+    state.title = 'Focaccia'
+    state.tags = ['bread']
+    state.serves = 8
+    state.ingredientLines = ['500 g strong white flour']
+    state.methodSteps = ['Mix the flour and water.']
+    state.notes = 'Use a metal tray.'
+
+    expect(buildMarkdown(state, null, '2026-09-20')).toBe([
+      '---',
+      'title: Focaccia',
+      'tags: [bread]',
+      'serves: 8',
+      'created: 2026-09-20',
+      'updated: 2026-09-20',
+      '---',
+      '',
+      '# Focaccia',
+      '',
+      '## Ingredients',
+      '',
+      '- 500 g strong white flour',
+      '',
+      '## Method',
+      '',
+      '1. Mix the flour and water.',
+      '',
+      '## Notes',
+      '',
+      'Use a metal tray.',
+      '',
+    ].join('\n'))
   })
 })
 
