@@ -1,0 +1,2 @@
+*.md text eol=lf
+lib/recipe/fixtures/crlf.md -text

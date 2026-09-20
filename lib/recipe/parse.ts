@@ -32,8 +32,10 @@ export function parseRecipe(text: string, slug: string): Recipe {
 
   const fmMatch = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*\r?\n?/.exec(text)
   if (fmMatch) {
-    frontmatterRaw = fmMatch[1]
-    frontmatter = parseFrontmatter(fmMatch[1].replace(/\r\n/g, '\n'))
+    // Normalise to \n here too, so every in-memory string uses \n and the
+    // serializer can restore \r\n in one place, without doubling it up.
+    frontmatterRaw = fmMatch[1].replace(/\r\n/g, '\n')
+    frontmatter = parseFrontmatter(frontmatterRaw)
     body = text.slice(fmMatch[0].length)
   }
 
