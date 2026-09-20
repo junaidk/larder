@@ -128,6 +128,19 @@ export function ViewControls({
           ))}
         </div>
 
+        {active && (
+          <button
+            type="button"
+            onClick={() => {
+              try { localStorage.removeItem(STORAGE_KEY) } catch { /* private mode */ }
+              set({ units: null, scale: null, serves: null })
+            }}
+            className="ml-2 rounded px-3 py-1 text-sm text-stone-500 underline hover:text-stone-900"
+          >
+            Reset
+          </button>
+        )}
+
         {serves !== null && (
           <label className="ml-2 flex items-center gap-2 text-sm text-stone-500">
             Serves
@@ -143,21 +156,6 @@ export function ViewControls({
         )}
       </div>
 
-      {active && (
-        <p className="flex items-center gap-3 rounded bg-amber-100 px-3 py-2 text-sm text-amber-900">
-          This view is not the file. The file keeps the amounts as written.
-          <button
-            type="button"
-            onClick={() => {
-              try { localStorage.removeItem(STORAGE_KEY) } catch { /* private mode */ }
-              set({ units: null, scale: null, serves: null })
-            }}
-            className="underline"
-          >
-            Reset
-          </button>
-        </p>
-      )}
     </div>
   )
 }

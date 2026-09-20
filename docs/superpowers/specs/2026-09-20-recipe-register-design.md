@@ -310,9 +310,14 @@ The cost of this rule: a step that reads `divide the dough into 2` keeps the
 number 2 at double scale. This cost is much smaller than the risk of a wrong
 time or a wrong temperature.
 
-A banner shows when a scale or a conversion is active. The banner has a reset
-control. Without the banner a user can forget the active scale. That user then
-writes a cook log note about amounts that the file does not hold.
+A reset control shows when a scale or a conversion is active. It sits with the
+other controls. The control going away is how the user reads that the view now
+matches the file.
+
+An earlier version of this design also put a banner above the recipe, which
+said that the view was not the file. The user asked for the banner to go. The
+buttons already show which system and which scale are active, so the banner
+repeated what the controls said.
 
 ## 10. Tests
 
