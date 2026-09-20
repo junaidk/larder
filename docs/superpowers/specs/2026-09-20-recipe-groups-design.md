@@ -47,7 +47,20 @@ export interface RecipeRef {
 }
 ```
 
-`Recipe` gains a `group` field. `RecipeSummary` gains a `group` field.
+`RecipeSummary` gains a `group` field. The storage module builds that type,
+so the parser is not involved.
+
+`Recipe` gains an OPTIONAL `group` field. The field must be optional, because
+`parseRecipe` builds a `Recipe` and section 11 keeps the parser untouched. The
+parser leaves the field unset. `readRecipe` sets it after the parse.
+
+A function that writes a recipe therefore takes the reference as its own
+argument. It does not read the group off the recipe, because an optional field
+may be missing:
+
+```ts
+saveRecipe(ref: RecipeRef, recipe: Recipe): Promise<void>
+```
 
 Both `group` and `slug` must match `^[a-z0-9-]+$`. The app checks each part
 before it joins the part into a path. This rule stops a path escape. The
@@ -78,7 +91,7 @@ names each file. The app does not move a loose file on its own.
 | `listGroups()` | New. Returns the folder names, sorted. |
 | `listRecipes()` | Returns `{ recipes, looseFiles }`. |
 | `readRecipe(ref)` | Takes a `RecipeRef`. |
-| `saveRecipe(recipe)` | Writes to the group that the recipe holds. |
+| `saveRecipe(ref, recipe)` | Takes the reference. Writes to that group. |
 | `createRecipe(group, title, markdown)` | Takes a group. Returns a `RecipeRef`. |
 | `moveRecipe(from, to)` | New. Moves a file between groups. |
 | `addLogEntry(ref, entry)` | Takes a `RecipeRef`. |
