@@ -33,7 +33,7 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pl-12">
       {groups.map((group, g) => (
         <div key={g}>
           {group.name && (
