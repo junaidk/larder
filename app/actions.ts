@@ -1,7 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { addLogEntry, isSafeSlug } from '@/lib/storage/index'
+import { addLogEntry, createRecipe, isSafeSlug, readRecipe, saveRecipe } from '@/lib/storage/index'
+import { parseRecipe } from '@/lib/recipe/parse'
 
 export type ActionResult = { ok: true; slug?: string } | { ok: false; error: string }
 
@@ -31,4 +32,27 @@ export async function addLogEntryAction(slug: string, form: FormData): Promise<A
   revalidatePath(`/r/${slug}`)
   revalidatePath('/')
   return { ok: true }
+}
+
+export async function saveRecipeAction(
+  slug: string | null,
+  markdown: string,
+  title: string,
+): Promise<ActionResult> {
+  if (!title.trim()) return { ok: false, error: 'Give the recipe a title.' }
+  if (markdown.length > 200_000) return { ok: false, error: 'That recipe is too large.' }
+
+  if (slug === null) {
+    const created = await createRecipe(title, markdown)
+    revalidatePath('/')
+    return { ok: true, slug: created }
+  }
+
+  if (!isSafeSlug(slug)) return { ok: false, error: 'That recipe name is not valid.' }
+  if (!(await readRecipe(slug))) return { ok: false, error: 'That recipe no longer exists.' }
+
+  await saveRecipe(parseRecipe(markdown, slug))
+  revalidatePath('/')
+  revalidatePath(`/r/${slug}`)
+  return { ok: true, slug }
 }
