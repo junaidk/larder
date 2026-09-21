@@ -65,6 +65,26 @@ See `docs/superpowers/specs/2026-09-20-recipe-register-design.md`, section 4.
 A recipe file stays readable and editable in any text editor. The app keeps
 every part of a file that you did not change.
 
+## Deploying
+
+`make deploy` sends this checkout to the server, builds the image there and
+starts it. The build runs on the server because that machine is amd64 while a
+Mac is arm64.
+
+The settings live in `deploy/Makefile`, which git ignores because it holds the
+host address and the paths. Without that file `make deploy` stops and says so.
+
+| Target | What it does |
+|---|---|
+| `make -C deploy deploy` | Send the code, build, start, then check the container answers |
+| `make -C deploy status` | Show the container |
+| `make -C deploy logs` | Follow the log |
+| `make -C deploy down` | Stop the container |
+| `make -C deploy seed` | Copy `my-recipes` to the server. Never part of a deploy. |
+
+The app has no authentication. Anyone who reaches the port can read and change
+the recipes, so put it only on a network you trust.
+
 ## Tests
 
 ```bash
