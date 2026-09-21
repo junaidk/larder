@@ -19,15 +19,6 @@ export interface DisplayGroup {
 export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
   const [done, setDone] = useState<Record<string, boolean>>({})
 
-  // The amount and its unit sit together in one column, sized to the widest
-  // pair in the list. One gap then separates them from the names, which all
-  // start at the same place.
-  const rows = groups.flatMap((g) => g.ingredients)
-  const measureWidth = `${Math.max(
-    1,
-    ...rows.map((r) => `${r.amount} ${r.unit}`.trim().length),
-  )}ch`
-
   function toggle(key: string) {
     setDone((previous) => ({ ...previous, [key]: !previous[key] }))
   }
@@ -70,21 +61,17 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
                         {p.text}
                       </span>
                     ) : (
-                      <>
-                        <span
-                          style={{ width: measureWidth }}
-                          className={`shrink-0 pr-2.5 font-sans text-sm ${struck ? 'line-through' : ''}`}
-                        >
-                          <span className="font-medium tabular-nums text-stone-900">{p.amount}</span>
-                          {p.unit && <span className="text-stone-400"> {p.unit}</span>}
+                      <span
+                        className={`min-w-0 font-serif text-stone-800 ${struck ? 'line-through' : ''}`}
+                      >
+                        <span className="font-sans text-sm font-medium tabular-nums text-stone-900">
+                          {p.amount}
                         </span>
-                        <span
-                          className={`min-w-0 font-serif text-stone-800 ${struck ? 'line-through' : ''}`}
-                        >
-                          {p.item}
-                          {p.prep && <span className="text-stone-500 italic">, {p.prep}</span>}
-                        </span>
-                      </>
+                        {p.unit && <span className="font-sans text-sm text-stone-400"> {p.unit}</span>}
+                        {' '}
+                        {p.item}
+                        {p.prep && <span className="text-stone-500 italic">, {p.prep}</span>}
+                      </span>
                     )}
                   </button>
                 </li>
