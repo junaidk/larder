@@ -1,17 +1,27 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import type { RecipeRef } from '@/lib/recipe/types'
 import {
-  addLogEntry, createRecipe, deleteLogEntry, isSafeSlug, readRecipe, saveRecipe,
+  addLogEntry, createRecipe, deleteLogEntry, isSafeName, moveRecipe,
+  readRecipe, saveRecipe, slugify,
 } from '@/lib/storage/index'
 import { parseRecipe } from '@/lib/recipe/parse'
 
-export type ActionResult = { ok: true; slug?: string } | { ok: false; error: string }
+export type ActionResult = { ok: true; ref?: RecipeRef } | { ok: false; error: string }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
-export async function addLogEntryAction(slug: string, form: FormData): Promise<ActionResult> {
-  if (!isSafeSlug(slug)) return { ok: false, error: 'That recipe name is not valid.' }
+function badRef(ref: RecipeRef): boolean {
+  return !isSafeName(ref.group) || !isSafeName(ref.slug)
+}
+
+function paths(ref: RecipeRef): string {
+  return `/r/${ref.group}/${ref.slug}`
+}
+
+export async function addLogEntryAction(ref: RecipeRef, form: FormData): Promise<ActionResult> {
+  if (badRef(ref)) return { ok: false, error: 'That recipe name is not valid.' }
 
   const date = String(form.get('date') ?? '').trim()
   if (!DATE_RE.test(date)) return { ok: false, error: 'Give a date in the form YYYY-MM-DD.' }
@@ -34,49 +44,73 @@ export async function addLogEntryAction(slug: string, form: FormData): Promise<A
   }
 
   try {
-    await addLogEntry(slug, { date, rating, note })
+    await addLogEntry(ref, { date, rating, note })
   } catch (error) {
     return { ok: false, error: (error as Error).message }
   }
 
-  revalidatePath(`/r/${slug}`)
+  revalidatePath(paths(ref))
   revalidatePath('/')
   return { ok: true }
 }
 
-export async function deleteLogEntryAction(slug: string, index: number): Promise<ActionResult> {
-  if (!isSafeSlug(slug)) return { ok: false, error: 'That recipe name is not valid.' }
+export async function deleteLogEntryAction(ref: RecipeRef, index: number): Promise<ActionResult> {
+  if (badRef(ref)) return { ok: false, error: 'That recipe name is not valid.' }
 
   try {
-    await deleteLogEntry(slug, index)
+    await deleteLogEntry(ref, index)
   } catch (error) {
     return { ok: false, error: (error as Error).message }
   }
 
-  revalidatePath(`/r/${slug}`)
+  revalidatePath(paths(ref))
   revalidatePath('/')
   return { ok: true }
 }
 
+/**
+ * Save a recipe.
+ *
+ * `ref` is null for a new recipe. For an existing recipe, a `group` that
+ * differs from `ref.group` moves the file. The slug never changes, because
+ * section 4.5 of the main design names a file once and keeps that name.
+ */
 export async function saveRecipeAction(
-  slug: string | null,
+  ref: RecipeRef | null,
+  group: string,
   markdown: string,
   title: string,
 ): Promise<ActionResult> {
   if (!title.trim()) return { ok: false, error: 'Give the recipe a title.' }
   if (markdown.length > 200_000) return { ok: false, error: 'That recipe is too large.' }
 
-  if (slug === null) {
-    const created = await createRecipe(title, markdown)
+  const target = slugify(group)
+  if (!group.trim()) return { ok: false, error: 'Give the recipe a group.' }
+  if (!isSafeName(target)) return { ok: false, error: 'That group name is not valid.' }
+
+  if (ref === null) {
+    const created = await createRecipe(target, title, markdown)
     revalidatePath('/')
-    return { ok: true, slug: created }
+    return { ok: true, ref: created }
   }
 
-  if (!isSafeSlug(slug)) return { ok: false, error: 'That recipe name is not valid.' }
-  if (!(await readRecipe(slug))) return { ok: false, error: 'That recipe no longer exists.' }
+  if (badRef(ref)) return { ok: false, error: 'That recipe name is not valid.' }
+  if (!(await readRecipe(ref))) return { ok: false, error: 'That recipe no longer exists.' }
 
-  await saveRecipe(parseRecipe(markdown, slug))
+  const moved: RecipeRef = { group: target, slug: ref.slug }
+
+  if (target !== ref.group) {
+    try {
+      await moveRecipe(ref, moved)
+    } catch (error) {
+      return { ok: false, error: (error as Error).message }
+    }
+  }
+
+  await saveRecipe(moved, parseRecipe(markdown, moved.slug))
+
   revalidatePath('/')
-  revalidatePath(`/r/${slug}`)
-  return { ok: true, slug }
+  revalidatePath(paths(ref))
+  revalidatePath(paths(moved))
+  return { ok: true, ref: moved }
 }
