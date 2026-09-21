@@ -14,9 +14,11 @@ function cookedLabel(times: number): string {
 export function RecipeIndex({
   recipes,
   looseFiles,
+  unusableNames,
 }: {
   recipes: RecipeSummary[]
   looseFiles: string[]
+  unusableNames: string[]
 }) {
   const [query, setQuery] = useState('')
   const [tag, setTag] = useState('')
@@ -98,6 +100,16 @@ export function RecipeIndex({
           folder and {looseFiles.length === 1 ? 'does' : 'do'} not appear below:{' '}
           <span className="font-medium">{looseFiles.join(', ')}</span>. Move{' '}
           {looseFiles.length === 1 ? 'it' : 'them'} into a folder inside your recipes directory.
+        </p>
+      )}
+
+      {unusableNames.length > 0 && (
+        <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {unusableNames.length === 1 ? '1 name is' : `${unusableNames.length} names are`} not
+          usable and {unusableNames.length === 1 ? 'does' : 'do'} not appear below:{' '}
+          <span className="font-medium">{unusableNames.join(', ')}</span>. A folder or a file name
+          may only hold lowercase letters, numbers and hyphens. Rename{' '}
+          {unusableNames.length === 1 ? 'it' : 'them'} to see it in the index.
         </p>
       )}
 

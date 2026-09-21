@@ -79,7 +79,16 @@ export function RecipeEditor({
     setError(null)
     const result = await saveRecipeAction(recipe, group, markdown, state.title)
     setBusy(false)
-    if (!result.ok) { setError(result.error); return }
+    if (!result.ok) {
+      setError(result.error)
+      // The file may already have moved even though the save failed. Follow
+      // it to its new edit page, so the user is not left on a dead URL.
+      if (result.ref) {
+        router.push(`/r/${result.ref.group}/${result.ref.slug}/edit`)
+        router.refresh()
+      }
+      return
+    }
     router.push(`/r/${result.ref!.group}/${result.ref!.slug}`)
     router.refresh()
   }
@@ -240,7 +249,7 @@ export function RecipeEditor({
         <section className={`${pane === 'file' ? '' : 'hidden'} lg:block`}>
           <div className="sticky top-4">
             <p className="mb-2 text-xs text-stone-500">
-              {recipe ? `recipes/${recipe.group}/${recipe.slug}.md` : 'the new file'} — this is the exact text that the app writes
+              {recipe ? `recipes/${group.trim() || recipe.group}/${recipe.slug}.md` : 'the new file'} — this is the exact text that the app writes
             </p>
             <pre className="max-h-[70vh] overflow-auto rounded border border-stone-200 bg-white p-4 text-xs leading-relaxed">
               {markdown}

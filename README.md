@@ -69,7 +69,7 @@ every part of a file that you did not change.
 
 ```bash
 npm test     # unit tests
-npm run e2e  # one end-to-end test
+npm run e2e  # four end-to-end tests
 ```
 
 The most important tests are the round trip tests in

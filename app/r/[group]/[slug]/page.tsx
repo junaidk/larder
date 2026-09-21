@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { readRecipe } from '@/lib/storage/index'
+import { isSafeName, readRecipe } from '@/lib/storage/index'
 import { cookLog, ingredientGroups, methodText, notesText } from '@/lib/recipe/access'
 import { displayIngredient, displayIngredientParts } from '@/lib/view/display'
 import { convertMethodText } from '@/lib/units/convert'
@@ -22,6 +22,7 @@ type Props = {
 
 export default async function RecipePage({ params, searchParams }: Props) {
   const { group, slug } = await params
+  if (!isSafeName(group) || !isSafeName(slug)) notFound()
   const ref = { group, slug }
   const recipe = await readRecipe(ref)
   if (!recipe) notFound()

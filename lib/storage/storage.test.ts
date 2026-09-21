@@ -241,7 +241,7 @@ describe('listRecipes', () => {
 
   it('returns empty lists when the folder does not exist', async () => {
     process.env.RECIPES_DIR = join(dir, 'nope')
-    expect(await (await mod()).listRecipes()).toEqual({ recipes: [], looseFiles: [] })
+    expect(await (await mod()).listRecipes()).toEqual({ recipes: [], looseFiles: [], unusableNames: [] })
   })
 
   it('ignores a file that is not markdown', async () => {
@@ -249,6 +249,27 @@ describe('listRecipes', () => {
     writeFileSync(join(dir, 'breads', 'notes.txt'), 'hello')
     const { recipes } = await (await mod()).listRecipes()
     expect(recipes).toHaveLength(1)
+  })
+
+  it('reports a folder whose name has a capital letter or a space and leaves it out', async () => {
+    seed('breads', 'focaccia', SIMPLE)
+    mkdirSync(join(dir, 'Main Courses'), { recursive: true })
+    writeFileSync(join(dir, 'Main Courses', 'stew.md'), SIMPLE)
+
+    const { recipes, unusableNames } = await (await mod()).listRecipes()
+    expect(recipes.map((r) => r.slug)).toEqual(['focaccia'])
+    expect(unusableNames).toEqual(['Main Courses'])
+  })
+
+  it('reports a file inside a valid group whose own name is unusable', async () => {
+    seed('breads', 'focaccia', SIMPLE)
+    // A name distinct from any existing slug, even case-insensitively, so
+    // the test does not depend on whether the filesystem is case-sensitive.
+    writeFileSync(join(dir, 'breads', 'Sourdough Loaf.md'), SIMPLE)
+
+    const { recipes, unusableNames } = await (await mod()).listRecipes()
+    expect(recipes.map((r) => r.slug)).toEqual(['focaccia'])
+    expect(unusableNames).toEqual(['breads/Sourdough Loaf.md'])
   })
 })
 

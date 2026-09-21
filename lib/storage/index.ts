@@ -87,6 +87,30 @@ async function listRefs(): Promise<RecipeRef[]> {
   return refs.sort((a, b) => a.group.localeCompare(b.group) || a.slug.localeCompare(b.slug))
 }
 
+/**
+ * Names the app rejects because a folder or a file inside a group does not
+ * match `^[a-z0-9-]+$`. A rejected folder is reported by its own name. A
+ * rejected file is reported as `<group>/<file>`, so the notice on the index
+ * can tell the user which folder to look in.
+ */
+async function listUnusableNames(): Promise<string[]> {
+  const rootEntries = await readdirSafe(recipesDir())
+  const names = rootEntries
+    .filter((e) => e.isDirectory() && !isSafeName(e.name))
+    .map((e) => e.name)
+
+  for (const group of await listGroups()) {
+    const entries = await readdirSafe(join(recipesDir(), group))
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('.md')) continue
+      const slug = entry.name.slice(0, -3)
+      if (!isSafeName(slug)) names.push(`${group}/${entry.name}`)
+    }
+  }
+
+  return names.sort()
+}
+
 export function slugify(title: string): string {
   const slug = title
     .normalize('NFD')
@@ -253,12 +277,14 @@ function appendBlankLine(block: Recipe['blocks'][number]): void {
 export async function listRecipes(): Promise<{
   recipes: RecipeSummary[]
   looseFiles: string[]
+  unusableNames: string[]
 }> {
   const refs = await listRefs()
   const summaries = await Promise.all(refs.map(summarise))
   return {
     recipes: summaries.filter((s): s is RecipeSummary => s !== null),
     looseFiles: await listLooseFiles(),
+    unusableNames: await listUnusableNames(),
   }
 }
 

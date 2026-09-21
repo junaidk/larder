@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { RecipeEditor } from '@/components/RecipeEditor'
-import { listGroups, readRecipe } from '@/lib/storage/index'
+import { isSafeName, listGroups, readRecipe } from '@/lib/storage/index'
 import { stateFromRecipe } from '@/lib/view/build'
 
 export const dynamic = 'force-dynamic'
@@ -11,6 +11,7 @@ export default async function EditRecipePage({
   params: Promise<{ group: string; slug: string }>
 }) {
   const { group, slug } = await params
+  if (!isSafeName(group) || !isSafeName(slug)) notFound()
   const recipe = await readRecipe({ group, slug })
   if (!recipe) notFound()
 

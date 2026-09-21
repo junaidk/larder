@@ -8,7 +8,9 @@ import {
 } from '@/lib/storage/index'
 import { parseRecipe } from '@/lib/recipe/parse'
 
-export type ActionResult = { ok: true; ref?: RecipeRef } | { ok: false; error: string }
+export type ActionResult =
+  | { ok: true; ref?: RecipeRef }
+  | { ok: false; error: string; ref?: RecipeRef }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -16,7 +18,7 @@ function badRef(ref: RecipeRef): boolean {
   return !isSafeName(ref.group) || !isSafeName(ref.slug)
 }
 
-function paths(ref: RecipeRef): string {
+function urlFor(ref: RecipeRef): string {
   return `/r/${ref.group}/${ref.slug}`
 }
 
@@ -49,7 +51,7 @@ export async function addLogEntryAction(ref: RecipeRef, form: FormData): Promise
     return { ok: false, error: (error as Error).message }
   }
 
-  revalidatePath(paths(ref))
+  revalidatePath(urlFor(ref))
   revalidatePath('/')
   return { ok: true }
 }
@@ -63,7 +65,7 @@ export async function deleteLogEntryAction(ref: RecipeRef, index: number): Promi
     return { ok: false, error: (error as Error).message }
   }
 
-  revalidatePath(paths(ref))
+  revalidatePath(urlFor(ref))
   revalidatePath('/')
   return { ok: true }
 }
@@ -114,11 +116,14 @@ export async function saveRecipeAction(
   try {
     await saveRecipe(moved, parseRecipe(markdown, moved.slug))
   } catch (error) {
-    return { ok: false, error: (error as Error).message }
+    // The move above may already have run. The file then sits at `moved`,
+    // not at `ref`, so the caller needs `moved` to keep the user on a live
+    // URL rather than the now-dead one for `ref`.
+    return { ok: false, error: (error as Error).message, ref: moved }
   }
 
   revalidatePath('/')
-  revalidatePath(paths(ref))
-  revalidatePath(paths(moved))
+  revalidatePath(urlFor(ref))
+  revalidatePath(urlFor(moved))
   return { ok: true, ref: moved }
 }

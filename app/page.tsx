@@ -5,7 +5,7 @@ import { RecipeIndex } from '@/components/RecipeIndex'
 export const dynamic = 'force-dynamic'
 
 export default async function Home() {
-  const { recipes, looseFiles } = await listRecipes()
+  const { recipes, looseFiles, unusableNames } = await listRecipes()
   return (
     <main className="mx-auto max-w-5xl p-6 sm:p-8">
       <header className="mb-8 flex items-center justify-between">
@@ -17,7 +17,7 @@ export default async function Home() {
           New recipe
         </Link>
       </header>
-      <RecipeIndex recipes={recipes} looseFiles={looseFiles} />
+      <RecipeIndex recipes={recipes} looseFiles={looseFiles} unusableNames={unusableNames} />
     </main>
   )
 }
