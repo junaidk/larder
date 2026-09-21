@@ -32,8 +32,25 @@ recipes/
 The index shows a heading for each folder. To regroup a recipe, change the
 Group box in the editor, or move the file yourself.
 
-A markdown file directly inside `recipes/` is not a recipe location. The index
-names such a file so that it is never hidden.
+### Which files the index shows
+
+The app shows a file only when the folder name and the file name both hold
+lowercase letters, numbers and hyphens, and nothing else. That rule is what
+keeps a name from reaching a path outside the recipes folder.
+
+The app shows nothing and says nothing about:
+
+| Left out | Example |
+|---|---|
+| A markdown file directly inside the recipes folder | `recipes/notes.md` |
+| A folder whose name breaks the rule | `recipes/Main Courses/`, `recipes/.obsidian/` |
+| A file whose name breaks the rule | `recipes/breads/Sourdough Loaf.md` |
+| A file nested deeper than one folder | `recipes/breads/old/loaf.md` |
+| A file that is not markdown | `recipes/breads/photo.jpg` |
+
+So a recipe that does not appear has a name to fix. Rename the folder or the
+file to lowercase letters, numbers and hyphens, and it appears on the next
+page load. The app never renames anything on its own.
 
 To use another folder, set `RECIPES_DIR`:
 

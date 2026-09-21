@@ -13,13 +13,7 @@ function cookedLabel(times: number): string {
   return times > 0 ? `cooked ${times}\u00d7` : 'not cooked yet'
 }
 
-export function RecipeIndex({
-  recipes,
-  unusableNames,
-}: {
-  recipes: RecipeSummary[]
-  unusableNames: string[]
-}) {
+export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
   const [query, setQuery] = useState('')
   const [tag, setTag] = useState('')
   const [minRating, setMinRating] = useState(0)
@@ -109,16 +103,6 @@ export function RecipeIndex({
           {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} stars and up</option>)}
         </select>
       </div>
-
-      {unusableNames.length > 0 && (
-        <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {unusableNames.length === 1 ? '1 name is' : `${unusableNames.length} names are`} not
-          usable and {unusableNames.length === 1 ? 'does' : 'do'} not appear below:{' '}
-          <span className="font-medium">{unusableNames.join(', ')}</span>. A folder or a file name
-          may only hold lowercase letters, numbers and hyphens. Rename{' '}
-          {unusableNames.length === 1 ? 'it' : 'them'} to see it in the index.
-        </p>
-      )}
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-stone-500">

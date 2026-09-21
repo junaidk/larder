@@ -18,7 +18,7 @@ The work is complete when the app meets these criteria:
 | 2 | The index groups the recipes under a heading for each folder. |
 | 3 | The user creates a recipe into a group from the editor. |
 | 4 | The user changes the group of a recipe. The app moves the file. |
-| 5 | The app names a folder whose name it cannot use, and a file inside a group whose name it cannot use. It does not hide those. |
+| 5 | The app shows a file only when the group name and the slug both match `^[a-z0-9-]+$`. It says nothing about the files it leaves out. The README records the rule. |
 | 6 | A group name or a slug cannot reach a path outside the recipe folder. |
 
 ## 2. Constraints
@@ -81,27 +81,16 @@ after this change. The app must not hide such a file.
 listRecipes(): Promise<{ recipes: RecipeSummary[]; looseFiles: string[] }>
 ```
 
-`listRecipes` still returns `looseFiles`, and the storage tests still cover
-it, but the index does not show a notice for it. The user asked for that
-notice to go, because the one file sitting outside a folder is there on
-purpose. The cost: a file that lands outside a folder by accident now does
-not appear and nothing says so.
+`listRecipes` still returns `looseFiles` and `unusableNames`, and the storage
+tests still cover both, but the index shows no notice for either. The user
+asked for both notices to go: the one file outside a folder is there on
+purpose, and pointing the app at a folder that also holds tool metadata, such
+as `.obsidian` and `.trash`, made the second notice list names that were never
+recipes.
 
-`listRecipes` also reports the names it had to reject, in `unusableNames`:
-
-```ts
-listRecipes(): Promise<{
-  recipes: RecipeSummary[]
-  looseFiles: string[]
-  unusableNames: string[]
-}>
-```
-
-A folder name or a file name that fails `^[a-z0-9-]+$` goes in that list. A
-folder called `Main Courses` would otherwise hide every recipe inside it with
-no message. The index names these in their own notice, with different wording,
-because a name the app cannot use and a file outside a folder are different
-problems with different fixes.
+The cost: a recipe whose name breaks the rule does not appear and nothing says
+so. The README carries the rule and the list of what the index leaves out, so
+the answer is written down rather than shown at the moment of failure.
 
 ## 5. The storage module
 
