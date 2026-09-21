@@ -18,7 +18,7 @@ The work is complete when the app meets these criteria:
 | 2 | The index groups the recipes under a heading for each folder. |
 | 3 | The user creates a recipe into a group from the editor. |
 | 4 | The user changes the group of a recipe. The app moves the file. |
-| 5 | The app names a file that sits outside a folder. It does not hide it. |
+| 5 | The app names a file it cannot show, and does not hide it. That covers a file outside a folder, a folder whose name the app cannot use, and a file inside a group whose name it cannot use. |
 | 6 | A group name or a slug cannot reach a path outside the recipe folder. |
 
 ## 2. Constraints
@@ -83,6 +83,22 @@ listRecipes(): Promise<{ recipes: RecipeSummary[]; looseFiles: string[] }>
 
 The index shows a short notice when `looseFiles` is not empty. The notice
 names each file. The app does not move a loose file on its own.
+
+`listRecipes` also reports the names it had to reject, in `unusableNames`:
+
+```ts
+listRecipes(): Promise<{
+  recipes: RecipeSummary[]
+  looseFiles: string[]
+  unusableNames: string[]
+}>
+```
+
+A folder name or a file name that fails `^[a-z0-9-]+$` goes in that list. A
+folder called `Main Courses` would otherwise hide every recipe inside it with
+no message. The index names these in their own notice, with different wording,
+because a name the app cannot use and a file outside a folder are different
+problems with different fixes.
 
 ## 5. The storage module
 

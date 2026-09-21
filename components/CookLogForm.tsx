@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { addLogEntryAction } from '@/app/actions'
+import type { RecipeRef } from '@/lib/recipe/types'
 
 function today(): string {
   const now = new Date()
@@ -10,7 +11,7 @@ function today(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
-export function CookLogForm({ slug }: { slug: string }) {
+export function CookLogForm({ recipe }: { recipe: RecipeRef }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [rating, setRating] = useState(0)
@@ -21,7 +22,7 @@ export function CookLogForm({ slug }: { slug: string }) {
     setBusy(true)
     setError(null)
     form.set('rating', rating > 0 ? String(rating) : '')
-    const result = await addLogEntryAction(slug, form)
+    const result = await addLogEntryAction(recipe, form)
     setBusy(false)
     if (!result.ok) { setError(result.error); return }
     setOpen(false)

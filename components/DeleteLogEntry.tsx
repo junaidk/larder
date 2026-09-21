@@ -3,8 +3,15 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { deleteLogEntryAction } from '@/app/actions'
+import type { RecipeRef } from '@/lib/recipe/types'
 
-export function DeleteLogEntry({ slug, index, date }: { slug: string; index: number; date: string }) {
+export function DeleteLogEntry({
+  recipe, index, date,
+}: {
+  recipe: RecipeRef
+  index: number
+  date: string
+}) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -12,7 +19,7 @@ export function DeleteLogEntry({ slug, index, date }: { slug: string; index: num
   async function remove() {
     setBusy(true)
     setError(null)
-    const result = await deleteLogEntryAction(slug, index)
+    const result = await deleteLogEntryAction(recipe, index)
     setBusy(false)
     if (!result.ok) { setError(result.error); return }
     router.refresh()

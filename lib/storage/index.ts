@@ -1,23 +1,114 @@
 import { randomBytes } from 'node:crypto'
 import { link, mkdir, readFile, readdir, rename, writeFile, unlink } from 'node:fs/promises'
-import { join } from 'node:path'
-import type { CookLogEntry, Recipe, RecipeSummary } from '@/lib/recipe/types'
+import { dirname, join } from 'node:path'
+import type { CookLogEntry, Recipe, RecipeRef, RecipeSummary } from '@/lib/recipe/types'
 import { parseRecipe } from '@/lib/recipe/parse'
 import { serializeRecipe, formatLogEntry } from '@/lib/recipe/serialize'
 import { allIngredients, cookLog } from '@/lib/recipe/access'
 
-const SAFE_SLUG = /^[a-z0-9-]+$/
+const SAFE_NAME = /^[a-z0-9-]+$/
 
 export function recipesDir(): string {
   return process.env.RECIPES_DIR || join(process.cwd(), 'recipes')
 }
 
-export function isSafeSlug(slug: string): boolean {
-  return SAFE_SLUG.test(slug)
+/** A group name and a slug obey the same rule. */
+export function isSafeName(name: string): boolean {
+  return SAFE_NAME.test(name)
 }
 
-function requireSafeSlug(slug: string): void {
-  if (!isSafeSlug(slug)) throw new Error(`Unsafe recipe slug: ${slug}`)
+function requireSafeGroup(group: string): void {
+  if (!isSafeName(group)) throw new Error(`Unsafe group name: ${group}`)
+}
+
+function requireSafeRef(ref: RecipeRef): void {
+  requireSafeGroup(ref.group)
+  if (!isSafeName(ref.slug)) throw new Error(`Unsafe recipe slug: ${ref.slug}`)
+}
+
+function groupDir(group: string): string {
+  requireSafeGroup(group)
+  return join(recipesDir(), group)
+}
+
+function pathFor(ref: RecipeRef): string {
+  requireSafeRef(ref)
+  return join(recipesDir(), ref.group, `${ref.slug}.md`)
+}
+
+/** Write a file with no risk of a part-written result. */
+async function writeAtomic(target: string, content: string): Promise<void> {
+  await mkdir(dirname(target), { recursive: true })
+  const temp = `${target}.${randomBytes(6).toString('hex')}.tmp`
+  try {
+    await writeFile(temp, content, 'utf8')
+    await rename(temp, target)
+  } catch (error) {
+    await unlink(temp).catch(() => {})
+    throw error
+  }
+}
+
+async function readdirSafe(path: string) {
+  try {
+    return await readdir(path, { withFileTypes: true })
+  } catch {
+    return []
+  }
+}
+
+export async function listGroups(): Promise<string[]> {
+  const entries = await readdirSafe(recipesDir())
+  return entries
+    .filter((e) => e.isDirectory() && isSafeName(e.name))
+    .map((e) => e.name)
+    .sort()
+}
+
+/** Markdown files sitting outside a group. The index names these. */
+async function listLooseFiles(): Promise<string[]> {
+  const entries = await readdirSafe(recipesDir())
+  return entries
+    .filter((e) => e.isFile() && e.name.endsWith('.md'))
+    .map((e) => e.name)
+    .sort()
+}
+
+async function listRefs(): Promise<RecipeRef[]> {
+  const refs: RecipeRef[] = []
+  for (const group of await listGroups()) {
+    const entries = await readdirSafe(join(recipesDir(), group))
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('.md')) continue
+      const slug = entry.name.slice(0, -3)
+      if (isSafeName(slug)) refs.push({ group, slug })
+    }
+  }
+  return refs.sort((a, b) => a.group.localeCompare(b.group) || a.slug.localeCompare(b.slug))
+}
+
+/**
+ * Names the app rejects because a folder or a file inside a group does not
+ * match `^[a-z0-9-]+$`. A rejected folder is reported by its own name. A
+ * rejected file is reported as `<group>/<file>`, so the notice on the index
+ * can tell the user which folder to look in.
+ */
+async function listUnusableNames(): Promise<string[]> {
+  const rootEntries = await readdirSafe(recipesDir())
+  const names = rootEntries
+    .filter((e) => e.isDirectory() && !isSafeName(e.name))
+    .map((e) => e.name)
+
+  for (const group of await listGroups()) {
+    const entries = await readdirSafe(join(recipesDir(), group))
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('.md')) continue
+      const slug = entry.name.slice(0, -3)
+      if (!isSafeName(slug)) names.push(`${group}/${entry.name}`)
+    }
+  }
+
+  return names.sort()
 }
 
 export function slugify(title: string): string {
@@ -33,83 +124,57 @@ export function slugify(title: string): string {
   return slug || 'recipe'
 }
 
-function pathFor(slug: string): string {
-  requireSafeSlug(slug)
-  return join(recipesDir(), `${slug}.md`)
-}
-
-/** Write a file with no risk of a part-written result. */
-async function writeAtomic(target: string, content: string): Promise<void> {
-  await mkdir(recipesDir(), { recursive: true })
-  const temp = `${target}.${randomBytes(6).toString('hex')}.tmp`
+export async function readRecipe(ref: RecipeRef): Promise<Recipe | null> {
+  const path = pathFor(ref)
   try {
-    await writeFile(temp, content, 'utf8')
-    await rename(temp, target)
-  } catch (error) {
-    await unlink(temp).catch(() => {})
-    throw error
-  }
-}
-
-async function listSlugs(): Promise<string[]> {
-  let names: string[]
-  try {
-    names = await readdir(recipesDir())
-  } catch {
-    return []
-  }
-  return names
-    .filter((n) => n.endsWith('.md'))
-    .map((n) => n.slice(0, -3))
-    .filter(isSafeSlug)
-    .sort()
-}
-
-export async function readRecipe(slug: string): Promise<Recipe | null> {
-  const path = pathFor(slug)
-  try {
-    return parseRecipe(await readFile(path, 'utf8'), slug)
+    const recipe = parseRecipe(await readFile(path, 'utf8'), ref.slug)
+    recipe.group = ref.group
+    return recipe
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
     throw error
   }
 }
 
-export async function saveRecipe(recipe: Recipe): Promise<void> {
-  await writeAtomic(pathFor(recipe.slug), serializeRecipe(recipe))
+export async function saveRecipe(ref: RecipeRef, recipe: Recipe): Promise<void> {
+  await writeAtomic(pathFor(ref), serializeRecipe(recipe))
 }
 
 const MAX_SLUG_ATTEMPTS = 1000
 
 /**
- * Create a new recipe file with a slug that no other file holds.
+ * Create a new recipe file inside a group, with a slug that no other file in
+ * that group holds.
  *
- * The content is written to a temp file first, under a throwaway name, in
- * the same directory as the target. Only then does the function try to
- * claim a filename, with `link()` from the temp file to the target path.
- * `link()` fails with `EEXIST` when another writer already holds the
- * path, exactly as the earlier `wx` flag did, so the suffix-advance loop
- * keeps its shape.
+ * The content is written to a temp file first, under a throwaway name, in the
+ * same directory as the target. Only then does the function try to claim a
+ * filename, with `link()` from the temp file to the target path. `link()`
+ * fails with `EEXIST` when another writer already holds the path, so the
+ * suffix-advance loop keeps its shape.
  *
- * Because the content is complete on disk before the `link` call runs,
- * the target path can only ever be absent or complete. A crash between
- * the two steps leaves the temp file behind, never a truncated recipe at
- * a clean slug. The temp file is removed on every exit, success or
- * failure, so a failed create leaves no rubbish behind.
+ * Because the content is complete on disk before the `link` call runs, the
+ * target path can only ever be absent or complete. A crash between the two
+ * steps leaves the temp file behind, never a truncated recipe at a clean
+ * slug. The temp file is removed on every exit, success or failure.
  */
-export async function createRecipe(title: string, markdown: string): Promise<string> {
+export async function createRecipe(
+  group: string,
+  title: string,
+  markdown: string,
+): Promise<RecipeRef> {
   const base = slugify(title)
-  await mkdir(recipesDir(), { recursive: true })
+  const dir = groupDir(group)
+  await mkdir(dir, { recursive: true })
 
-  const temp = join(recipesDir(), `.${base}.${randomBytes(6).toString('hex')}.tmp`)
+  const temp = join(dir, `.${base}.${randomBytes(6).toString('hex')}.tmp`)
   await writeFile(temp, markdown, 'utf8')
 
   try {
     let slug = base
     for (let n = 2; n <= MAX_SLUG_ATTEMPTS; n += 1) {
       try {
-        await link(temp, pathFor(slug))
-        return slug
+        await link(temp, pathFor({ group, slug }))
+        return { group, slug }
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
         slug = `${base}-${n}`
@@ -121,9 +186,36 @@ export async function createRecipe(title: string, markdown: string): Promise<str
   }
 }
 
-export async function addLogEntry(slug: string, entry: CookLogEntry): Promise<void> {
-  const recipe = await readRecipe(slug)
-  if (!recipe) throw new Error(`No recipe with the slug ${slug}`)
+/**
+ * Move a recipe between groups.
+ *
+ * The function links the new path before it unlinks the old one, so the
+ * content exists at one path or at both, never at neither. `link` fails with
+ * `EEXIST` when a file already holds the target, so a move never overwrites
+ * another recipe.
+ */
+export async function moveRecipe(from: RecipeRef, to: RecipeRef): Promise<void> {
+  const fromPath = pathFor(from)
+  const toPath = pathFor(to)
+  if (fromPath === toPath) return
+
+  await mkdir(groupDir(to.group), { recursive: true })
+
+  try {
+    await link(fromPath, toPath)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+      throw new Error(`A recipe already exists at ${to.group}/${to.slug}`)
+    }
+    throw error
+  }
+
+  await unlink(fromPath)
+}
+
+export async function addLogEntry(ref: RecipeRef, entry: CookLogEntry): Promise<void> {
+  const recipe = await readRecipe(ref)
+  if (!recipe) throw new Error(`No recipe at ${ref.group}/${ref.slug}`)
 
   // A new entry carries an empty line at the end, so that it stays apart
   // from the entry below it.
@@ -147,16 +239,16 @@ export async function addLogEntry(slug: string, entry: CookLogEntry): Promise<vo
   }
 
   recipe.endsWithNewline = true
-  await saveRecipe(recipe)
+  await saveRecipe(ref, recipe)
 }
 
 /**
  * Remove one cook log entry. `index` counts from the newest entry, in the
  * same order that `cookLog` returns.
  */
-export async function deleteLogEntry(slug: string, index: number): Promise<void> {
-  const recipe = await readRecipe(slug)
-  if (!recipe) throw new Error(`No recipe with the slug ${slug}`)
+export async function deleteLogEntry(ref: RecipeRef, index: number): Promise<void> {
+  const recipe = await readRecipe(ref)
+  if (!recipe) throw new Error(`No recipe at ${ref.group}/${ref.slug}`)
 
   const block = recipe.blocks.find((b) => b.kind === 'cooklog')
   if (!block || block.kind !== 'cooklog') {
@@ -167,7 +259,7 @@ export async function deleteLogEntry(slug: string, index: number): Promise<void>
   }
 
   block.entries = block.entries.filter((_, i) => i !== index)
-  await saveRecipe(recipe)
+  await saveRecipe(ref, recipe)
 }
 
 /** Make sure a block ends with one empty line. */
@@ -182,22 +274,31 @@ function appendBlankLine(block: Recipe['blocks'][number]): void {
   if (lines[lines.length - 1] !== '') lines.push('')
 }
 
-export async function listRecipes(): Promise<RecipeSummary[]> {
-  const slugs = await listSlugs()
-  const summaries = await Promise.all(slugs.map(summarise))
-  return summaries.filter((s): s is RecipeSummary => s !== null)
+export async function listRecipes(): Promise<{
+  recipes: RecipeSummary[]
+  looseFiles: string[]
+  unusableNames: string[]
+}> {
+  const refs = await listRefs()
+  const summaries = await Promise.all(refs.map(summarise))
+  return {
+    recipes: summaries.filter((s): s is RecipeSummary => s !== null),
+    looseFiles: await listLooseFiles(),
+    unusableNames: await listUnusableNames(),
+  }
 }
 
-async function summarise(slug: string): Promise<RecipeSummary | null> {
-  const recipe = await readRecipe(slug)
+async function summarise(ref: RecipeRef): Promise<RecipeSummary | null> {
+  const recipe = await readRecipe(ref)
   if (!recipe) return null
 
   const log = cookLog(recipe)
   const items = allIngredients(recipe).map((i) => i.item ?? i.rawLine)
 
   return {
-    slug,
-    title: recipe.frontmatter.title || slug,
+    group: ref.group,
+    slug: ref.slug,
+    title: recipe.frontmatter.title || ref.slug,
     tags: recipe.frontmatter.tags,
     serves: recipe.frontmatter.serves,
     latestRating: log[0]?.rating ?? null,

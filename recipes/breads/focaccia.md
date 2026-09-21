@@ -6,7 +6,7 @@ prep_time: 20m
 cook_time: 25m
 source: https://example.com/focaccia
 created: 2026-09-20
-updated: 2026-09-20
+updated: 2026-09-21
 ---
 
 # Focaccia
@@ -26,8 +26,8 @@ Dimpled, oily, and best on the day.
 
 ## Method
 
-1. Mix the flour, water, and yeast.
-2. Bake at 220C for 25 minutes.
+1. Mix the flour, water, and yeast.Bake at 220C for 25 minutes.Bake at 220C for 25 minutes.Bake at 220C for 25 minutes.Bake at 220C for 25 minutes.
+2. Bake at 220C for 25 minutes.Bake at 220C for 25 minutes.Bake at 220C for 25 minutes.Bake at 220C for 25 minutes.Bake at 220C for 25 minutes.
 
 ## Notes
 
