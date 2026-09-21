@@ -12,6 +12,8 @@ import { DeleteLogEntry } from '@/components/DeleteLogEntry'
 import { IngredientList } from '@/components/IngredientList'
 import { MethodSteps } from '@/components/MethodSteps'
 import { Stars } from '@/components/Stars'
+import { Markdown } from '@/components/Markdown'
+import { sourceLink } from '@/lib/view/source'
 
 export const dynamic = 'force-dynamic'
 
@@ -63,14 +65,34 @@ export default async function RecipePage({ params, searchParams }: Props) {
         </h1>
 
         {description && (
-          <p className="mt-4 font-serif text-lg leading-relaxed text-stone-600">{description}</p>
+          <div className="mt-4 text-lg text-stone-600">
+            <Markdown>{description}</Markdown>
+          </div>
         )}
 
         <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 font-sans text-sm text-stone-500">
           {fm.serves !== null && <div><dt className="inline">Serves </dt><dd className="inline text-stone-700">{fm.serves}</dd></div>}
           {fm.prep_time && <div><dt className="inline">Prep </dt><dd className="inline text-stone-700">{fm.prep_time}</dd></div>}
           {fm.cook_time && <div><dt className="inline">Cook </dt><dd className="inline text-stone-700">{fm.cook_time}</dd></div>}
-          {fm.source && <div><dt className="inline">Source </dt><dd className="inline text-stone-700">{fm.source}</dd></div>}
+          {fm.source && (
+            <div>
+              <dt className="inline">Source </dt>
+              <dd className="inline text-stone-700">
+                {sourceLink(fm.source) ? (
+                  <a
+                    href={sourceLink(fm.source)!}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline decoration-stone-300 underline-offset-2 hover:decoration-stone-600"
+                  >
+                    {fm.source}
+                  </a>
+                ) : (
+                  fm.source
+                )}
+              </dd>
+            </div>
+          )}
         </dl>
       </header>
 
@@ -89,17 +111,15 @@ export default async function RecipePage({ params, searchParams }: Props) {
               <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
                 Method
               </h2>
-              <MethodSteps lead={method.lead} steps={method.steps} />
+              <MethodSteps lead={<Markdown>{method.lead.join('\n')}</Markdown>} steps={method.steps} />
             </section>
 
             {notes && (
-              <section className="mt-10 rounded-lg border border-stone-200 bg-white p-5">
-                <h2 className="mb-3 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
+              <section className="mt-10">
+                <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
                   Notes
                 </h2>
-                <div className="font-serif leading-relaxed whitespace-pre-wrap text-stone-700">
-                  {notes}
-                </div>
+                <Markdown>{notes}</Markdown>
               </section>
             )}
 
@@ -116,8 +136,8 @@ export default async function RecipePage({ params, searchParams }: Props) {
                         <DeleteLogEntry recipe={ref} index={i} date={entry.date} />
                       </span>
                     </div>
-                    <div className="mt-2 font-serif leading-relaxed whitespace-pre-wrap text-stone-700">
-                      {entry.note}
+                    <div className="mt-2">
+                      <Markdown>{entry.note}</Markdown>
                     </div>
                   </li>
                 ))}

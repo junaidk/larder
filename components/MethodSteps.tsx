@@ -1,27 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 /**
  * The method. A click strikes a step through, to help you keep your place.
  * The mark lives in this page only. It never reaches the recipe file.
  */
-export function MethodSteps({ lead, steps }: { lead: string[]; steps: string[] }) {
+export function MethodSteps({ lead, steps }: { lead: ReactNode; steps: string[] }) {
   const [done, setDone] = useState<Record<number, boolean>>({})
 
   function toggle(i: number) {
     setDone((previous) => ({ ...previous, [i]: !previous[i] }))
   }
 
-  const leadText = lead.join('\n').trim()
-
   return (
     <div>
-      {leadText && (
-        <p className="mb-4 font-serif text-[1.05rem] leading-relaxed whitespace-pre-wrap text-stone-700">
-          {leadText}
-        </p>
-      )}
+      {lead && <div className="mb-4">{lead}</div>}
 
       <ol className="space-y-4">
         {steps.map((step, i) => {
