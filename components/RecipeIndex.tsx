@@ -11,7 +11,13 @@ function cookedLabel(times: number): string {
   return times > 0 ? `cooked ${times}\u00d7` : 'not cooked yet'
 }
 
-export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
+export function RecipeIndex({
+  recipes,
+  looseFiles,
+}: {
+  recipes: RecipeSummary[]
+  looseFiles: string[]
+}) {
   const [query, setQuery] = useState('')
   const [tag, setTag] = useState('')
   const [minRating, setMinRating] = useState(0)
@@ -44,6 +50,17 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
     })
   }, [recipes, query, tag, minRating])
 
+  // Recipes under a heading for each folder, in alphabetical order.
+  const grouped = useMemo(() => {
+    const byGroup = new Map<string, RecipeSummary[]>()
+    for (const recipe of shown) {
+      const list = byGroup.get(recipe.group)
+      if (list) list.push(recipe)
+      else byGroup.set(recipe.group, [recipe])
+    }
+    return [...byGroup.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [shown])
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">
@@ -75,6 +92,15 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
         </select>
       </div>
 
+      {looseFiles.length > 0 && (
+        <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {looseFiles.length === 1 ? '1 file sits' : `${looseFiles.length} files sit`} outside a
+          folder and {looseFiles.length === 1 ? 'does' : 'do'} not appear below:{' '}
+          <span className="font-medium">{looseFiles.join(', ')}</span>. Move{' '}
+          {looseFiles.length === 1 ? 'it' : 'them'} into a folder inside your recipes directory.
+        </p>
+      )}
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-stone-500">
           {shown.length} of {recipes.length} recipes
@@ -96,58 +122,65 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
         </div>
       </div>
 
-      {view === 'grid' ? (
-        <ul className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {shown.map((r) => (
-            <li key={r.slug} className="h-full">
-              <Link
-                href={`/r/${r.slug}`}
-                className="flex h-full flex-col rounded-lg border border-stone-200 bg-white p-4 hover:border-stone-400"
-              >
-                <h2 className="font-medium">{r.title}</h2>
-                <div className="mt-2 flex items-center justify-between text-sm">
-                  <Stars rating={r.latestRating} />
-                  <span className="text-stone-500">{cookedLabel(r.timesCooked)}</span>
-                </div>
-                {/* mt-auto holds the tags at the foot, so every card matches. */}
-                <p className="mt-auto flex flex-wrap gap-1 pt-2">
-                  {r.tags.map((t) => (
-                    <span key={t} className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
-                      {t}
-                    </span>
-                  ))}
-                </p>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <ul className="space-y-2">
-          {shown.map((r) => (
-            <li key={r.slug}>
-              <Link
-                href={`/r/${r.slug}`}
-                className="flex flex-col gap-2 rounded-lg border border-stone-200 bg-white px-4 py-3 hover:border-stone-400 sm:flex-row sm:items-center sm:gap-4"
-              >
-                <h2 className="font-medium sm:w-64 sm:shrink-0">{r.title}</h2>
-                <p className="flex flex-1 flex-wrap gap-1">
-                  {r.tags.map((t) => (
-                    <span key={t} className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
-                      {t}
-                    </span>
-                  ))}
-                </p>
-                <div className="flex items-center gap-4 text-sm sm:shrink-0">
-                  <Stars rating={r.latestRating} />
-                  <span className="text-stone-500 sm:w-28 sm:text-right">
-                    {cookedLabel(r.timesCooked)}
-                  </span>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      {grouped.map(([group, items]) => (
+        <section key={group}>
+          <h2 className="mb-3 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
+            {group} <span className="text-stone-300">({items.length})</span>
+          </h2>
+
+          {view === 'grid' ? (
+            <ul className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {items.map((r) => (
+                <li key={`${r.group}/${r.slug}`} className="h-full">
+                  <Link
+                    href={`/r/${r.group}/${r.slug}`}
+                    className="flex h-full flex-col rounded-lg border border-stone-200 bg-white p-4 hover:border-stone-400"
+                  >
+                    <h3 className="font-medium">{r.title}</h3>
+                    <div className="mt-2 flex items-center justify-between text-sm">
+                      <Stars rating={r.latestRating} />
+                      <span className="text-stone-500">{cookedLabel(r.timesCooked)}</span>
+                    </div>
+                    <p className="mt-auto flex flex-wrap gap-1 pt-2">
+                      {r.tags.map((t) => (
+                        <span key={t} className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+                          {t}
+                        </span>
+                      ))}
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <ul className="space-y-2">
+              {items.map((r) => (
+                <li key={`${r.group}/${r.slug}`}>
+                  <Link
+                    href={`/r/${r.group}/${r.slug}`}
+                    className="flex flex-col gap-2 rounded-lg border border-stone-200 bg-white px-4 py-3 hover:border-stone-400 sm:flex-row sm:items-center sm:gap-4"
+                  >
+                    <h3 className="font-medium sm:w-64 sm:shrink-0">{r.title}</h3>
+                    <p className="flex flex-1 flex-wrap gap-1">
+                      {r.tags.map((t) => (
+                        <span key={t} className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+                          {t}
+                        </span>
+                      ))}
+                    </p>
+                    <div className="flex items-center gap-4 text-sm sm:shrink-0">
+                      <Stars rating={r.latestRating} />
+                      <span className="text-stone-500 sm:w-28 sm:text-right">
+                        {cookedLabel(r.timesCooked)}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ))}
 
       {shown.length === 0 && (
         <p className="rounded border border-dashed border-stone-300 p-8 text-center text-stone-500">
