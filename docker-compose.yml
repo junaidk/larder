@@ -1,0 +1,15 @@
+services:
+  recipe-register:
+    build: .
+    image: recipe-register:latest
+    container_name: recipe-register
+    restart: unless-stopped
+    # The CIFS mount forces this uid and gid on every file, so the process
+    # runs as them. Running as root would also work, with less reason to.
+    user: "${RECIPE_UID:-100000}:${RECIPE_GID:-110000}"
+    ports:
+      - "${RECIPE_PORT:-8090}:3000"
+    environment:
+      RECIPES_DIR: /data
+    volumes:
+      - "${RECIPE_DATA:?set RECIPE_DATA}:/data"

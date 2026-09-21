@@ -1,0 +1,14 @@
+.git
+node_modules
+.next
+out
+e2e/.recipes
+playwright-report
+test-results
+docs
+scratch
+my-recipes
+recipes
+deploy
+.superpowers
+*.log
