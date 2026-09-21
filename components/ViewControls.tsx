@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react'
 import { parseFactor } from '@/lib/units/scale'
 import { resolveUnits } from '@/lib/view/units'
 
-const STORAGE_KEY = 'recipe-register:units'
-const COLUMNS_KEY = 'recipe-register:columns'
+const STORAGE_KEY = 'larder:units'
+const COLUMNS_KEY = 'larder:columns'
 
 export function ViewControls({
   columns,

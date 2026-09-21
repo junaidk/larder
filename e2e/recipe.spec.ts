@@ -84,7 +84,7 @@ test('a saved imperial choice does not block a click on Metric', async ({ page }
   // The saved choice used to come straight back, because metric was written
   // as "no units parameter", which the restore step read as "never chosen".
   await page.goto('/r/breads/test-loaf')
-  await page.evaluate(() => localStorage.setItem('recipe-register:units', 'imperial'))
+  await page.evaluate(() => localStorage.setItem('larder:units', 'imperial'))
   await page.goto('/r/breads/test-loaf')
 
   await expect(page.getByRole('button', { name: 'Imperial' })).toHaveAttribute('aria-pressed', 'true')

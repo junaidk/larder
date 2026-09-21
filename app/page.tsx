@@ -9,7 +9,7 @@ export default async function Home() {
   return (
     <main className="mx-auto max-w-5xl p-6 sm:p-8">
       <header className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Recipe Register</h1>
+        <h1 className="text-2xl font-semibold">Larder</h1>
         <Link
           href="/new"
           className="rounded bg-stone-900 px-4 py-2 text-sm text-white hover:bg-stone-700"

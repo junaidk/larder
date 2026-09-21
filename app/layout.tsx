@@ -17,7 +17,7 @@ const serif = Source_Serif_4({
   axes: ['opsz'],
 })
 
-export const metadata: Metadata = { title: 'Recipe Register' }
+export const metadata: Metadata = { title: 'Larder' }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

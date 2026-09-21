@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, type ReactNode } from 'react'
 import { ViewControls } from '@/components/ViewControls'
 
-const COLUMNS_KEY = 'recipe-register:columns'
+const COLUMNS_KEY = 'larder:columns'
 
 export type Columns = 'one' | 'two'
 

@@ -1,5 +1,5 @@
 {
-  "name": "recipe-reg",
+  "name": "larder",
   "private": true,
   "engines": {
     "node": ">=22"

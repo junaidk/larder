@@ -1,4 +1,4 @@
-# Recipe Register
+# Larder
 
 A web app that keeps cooking recipes as markdown files. It adds dated cook
 notes, converts amounts between metric and imperial units, and scales a recipe.

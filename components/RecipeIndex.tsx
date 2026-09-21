@@ -6,8 +6,8 @@ import type { RecipeSummary } from '@/lib/recipe/types'
 import { Stars } from '@/components/Stars'
 import { collapseAllLabel, isGroupOpen, toggled } from '@/lib/view/collapse'
 
-const VIEW_KEY = 'recipe-register:view'
-const COLLAPSED_KEY = 'recipe-register:collapsed'
+const VIEW_KEY = 'larder:view'
+const COLLAPSED_KEY = 'larder:collapsed'
 
 function cookedLabel(times: number): string {
   return times > 0 ? `cooked ${times}\u00d7` : 'not cooked yet'

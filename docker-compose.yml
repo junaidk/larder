@@ -1,8 +1,8 @@
 services:
-  recipe-register:
+  larder:
     build: .
-    image: recipe-register:latest
-    container_name: recipe-register
+    image: larder:latest
+    container_name: larder
     restart: unless-stopped
     # The container runs as root. Setting `user` to the uid and gid that the
     # storage mount forces fails at start with "setgroups: invalid argument",
@@ -10,8 +10,8 @@ services:
     # either: the file server checks the share credential, and the mount forces
     # its own uid and gid on every file whatever wrote it.
     ports:
-      - "${RECIPE_PORT:-8090}:3000"
+      - "${LARDER_PORT:-8090}:3000"
     environment:
       RECIPES_DIR: /data
     volumes:
-      - "${RECIPE_DATA:?set RECIPE_DATA}:/data"
+      - "${LARDER_DATA:?set LARDER_DATA}:/data"

@@ -1,4 +1,4 @@
-# Recipe Register
+# Larder
 #
 # Deployment lives in deploy/Makefile, which git ignores because it carries
 # the host address and paths. Run `make deploy` to reach it.
