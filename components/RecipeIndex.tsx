@@ -15,11 +15,9 @@ function cookedLabel(times: number): string {
 
 export function RecipeIndex({
   recipes,
-  looseFiles,
   unusableNames,
 }: {
   recipes: RecipeSummary[]
-  looseFiles: string[]
   unusableNames: string[]
 }) {
   const [query, setQuery] = useState('')
@@ -111,15 +109,6 @@ export function RecipeIndex({
           {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} stars and up</option>)}
         </select>
       </div>
-
-      {looseFiles.length > 0 && (
-        <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {looseFiles.length === 1 ? '1 file sits' : `${looseFiles.length} files sit`} outside a
-          folder and {looseFiles.length === 1 ? 'does' : 'do'} not appear below:{' '}
-          <span className="font-medium">{looseFiles.join(', ')}</span>. Move{' '}
-          {looseFiles.length === 1 ? 'it' : 'them'} into a folder inside your recipes directory.
-        </p>
-      )}
 
       {unusableNames.length > 0 && (
         <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">

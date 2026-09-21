@@ -18,7 +18,7 @@ The work is complete when the app meets these criteria:
 | 2 | The index groups the recipes under a heading for each folder. |
 | 3 | The user creates a recipe into a group from the editor. |
 | 4 | The user changes the group of a recipe. The app moves the file. |
-| 5 | The app names a file it cannot show, and does not hide it. That covers a file outside a folder, a folder whose name the app cannot use, and a file inside a group whose name it cannot use. |
+| 5 | The app names a folder whose name it cannot use, and a file inside a group whose name it cannot use. It does not hide those. |
 | 6 | A group name or a slug cannot reach a path outside the recipe folder. |
 
 ## 2. Constraints
@@ -81,8 +81,11 @@ after this change. The app must not hide such a file.
 listRecipes(): Promise<{ recipes: RecipeSummary[]; looseFiles: string[] }>
 ```
 
-The index shows a short notice when `looseFiles` is not empty. The notice
-names each file. The app does not move a loose file on its own.
+`listRecipes` still returns `looseFiles`, and the storage tests still cover
+it, but the index does not show a notice for it. The user asked for that
+notice to go, because the one file sitting outside a folder is there on
+purpose. The cost: a file that lands outside a folder by accident now does
+not appear and nothing says so.
 
 `listRecipes` also reports the names it had to reject, in `unusableNames`:
 
