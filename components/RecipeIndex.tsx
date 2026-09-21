@@ -4,8 +4,10 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import type { RecipeSummary } from '@/lib/recipe/types'
 import { Stars } from '@/components/Stars'
+import { collapseAllLabel, isGroupOpen, toggled } from '@/lib/view/collapse'
 
 const VIEW_KEY = 'recipe-register:view'
+const COLLAPSED_KEY = 'recipe-register:collapsed'
 
 function cookedLabel(times: number): string {
   return times > 0 ? `cooked ${times}\u00d7` : 'not cooked yet'
@@ -24,6 +26,19 @@ export function RecipeIndex({
   const [tag, setTag] = useState('')
   const [minRating, setMinRating] = useState(0)
   const [view, setView] = useState<'grid' | 'list'>('grid')
+  const [collapsed, setCollapsed] = useState<string[]>([])
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(COLLAPSED_KEY)
+      if (saved) setCollapsed(JSON.parse(saved) as string[])
+    } catch { /* storage is not available, or holds something else */ }
+  }, [])
+
+  function remember(next: string[]) {
+    setCollapsed(next)
+    try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next)) } catch { /* storage is not available */ }
+  }
 
   // Remember the chosen view. Storage can throw in a private window.
   useEffect(() => {
@@ -53,6 +68,9 @@ export function RecipeIndex({
   }, [recipes, query, tag, minRating])
 
   // Recipes under a heading for each folder, in alphabetical order.
+  // Any of the three narrowing controls counts as filtering.
+  const filtering = query.trim() !== '' || tag !== '' || minRating > 0
+
   const grouped = useMemo(() => {
     const byGroup = new Map<string, RecipeSummary[]>()
     for (const recipe of shown) {
@@ -117,7 +135,20 @@ export function RecipeIndex({
         <p className="text-sm text-stone-500">
           {shown.length} of {recipes.length} recipes
         </p>
-        <div className="flex rounded bg-stone-100 p-1">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const names = grouped.map(([group]) => group)
+              const allClosed = collapseAllLabel(names, collapsed, filtering) === 'Expand all'
+              remember(allClosed ? [] : names)
+            }}
+            className="rounded px-3 py-1 text-sm text-stone-600 hover:text-stone-900"
+          >
+            {collapseAllLabel(grouped.map(([group]) => group), collapsed, filtering)}
+          </button>
+
+          <div className="flex rounded bg-stone-100 p-1">
           {(['grid', 'list'] as const).map((value) => (
             <button
               key={value}
@@ -131,16 +162,32 @@ export function RecipeIndex({
               {value}
             </button>
           ))}
+          </div>
         </div>
       </div>
 
-      {grouped.map(([group, items]) => (
+      {grouped.map(([group, items]) => {
+        const open = isGroupOpen(group, collapsed, filtering)
+        return (
         <section key={group}>
-          <h2 className="mb-3 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
-            {group} <span className="text-stone-300">({items.length})</span>
+          <h2 className="mb-3">
+            <button
+              type="button"
+              onClick={() => remember(toggled(collapsed, group))}
+              aria-expanded={open}
+              className="flex items-center gap-2 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase hover:text-stone-600"
+            >
+              <span
+                aria-hidden
+                className={`transition-transform ${open ? 'rotate-90' : ''}`}
+              >
+                ›
+              </span>
+              {group} <span className="text-stone-300">({items.length})</span>
+            </button>
           </h2>
 
-          {view === 'grid' ? (
+          {open && (view === 'grid' ? (
             <ul className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((r) => (
                 <li key={`${r.group}/${r.slug}`} className="h-full">
@@ -190,9 +237,10 @@ export function RecipeIndex({
                 </li>
               ))}
             </ul>
-          )}
+          ))}
         </section>
-      ))}
+        )
+      })}
 
       {shown.length === 0 && (
         <p className="rounded border border-dashed border-stone-300 p-8 text-center text-stone-500">
