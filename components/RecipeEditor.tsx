@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import type { EditorState } from '@/lib/view/build'
 import { buildMarkdown } from '@/lib/view/build'
-import type { Recipe } from '@/lib/recipe/types'
+import type { Recipe, RecipeRef } from '@/lib/recipe/types'
 import { parseIngredientLine } from '@/lib/recipe/ingredient'
 import { saveRecipeAction } from '@/app/actions'
 
@@ -28,16 +28,18 @@ function hint(line: string): string {
 }
 
 export function RecipeEditor({
-  initial, existing, slug, today,
+  initial, existing, recipe, groups, today,
 }: {
   initial: EditorState
   existing: Recipe | null
-  slug: string | null
+  recipe: RecipeRef | null
+  groups: string[]
   today: string
 }) {
   const router = useRouter()
   const [state, setState] = useState<EditorState>(initial)
   const [tagText, setTagText] = useState(initial.tags.join(', '))
+  const [group, setGroup] = useState(recipe?.group ?? groups[0] ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [pane, setPane] = useState<'form' | 'file'>('form')
@@ -75,10 +77,10 @@ export function RecipeEditor({
   async function save() {
     setBusy(true)
     setError(null)
-    const result = await saveRecipeAction(slug, markdown, state.title)
+    const result = await saveRecipeAction(recipe, group, markdown, state.title)
     setBusy(false)
     if (!result.ok) { setError(result.error); return }
-    router.push(`/r/${result.slug}`)
+    router.push(`/r/${result.ref!.group}/${result.ref!.slug}`)
     router.refresh()
   }
 
@@ -87,7 +89,7 @@ export function RecipeEditor({
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{slug ? 'Edit recipe' : 'New recipe'}</h1>
+        <h1 className="text-xl font-semibold">{recipe ? 'Edit recipe' : 'New recipe'}</h1>
         <div className="flex items-center gap-3">
           <div className="flex rounded bg-stone-100 p-1 lg:hidden">
             {(['form', 'file'] as const).map((value) => (
@@ -103,7 +105,7 @@ export function RecipeEditor({
             ))}
           </div>
           <Link
-            href={slug ? `/r/${slug}` : '/'}
+            href={recipe ? `/r/${recipe.group}/${recipe.slug}` : '/'}
             className="rounded px-3 py-2 text-sm text-stone-600 hover:text-stone-900"
           >
             Cancel
@@ -126,6 +128,20 @@ export function RecipeEditor({
           <label className="block text-sm">Title
             <input value={state.title} onChange={(e) => edit({ title: e.target.value })} className={field} />
           </label>
+
+          <label className="block text-sm">Group
+            <input
+              value={group}
+              onChange={(e) => setGroup(e.target.value)}
+              list="recipe-groups"
+              placeholder="breads"
+              required
+              className={field}
+            />
+          </label>
+          <datalist id="recipe-groups">
+            {groups.map((g) => <option key={g} value={g} />)}
+          </datalist>
 
           <label className="block text-sm">Tags, separated by a comma
             <input
@@ -224,7 +240,7 @@ export function RecipeEditor({
         <section className={`${pane === 'file' ? '' : 'hidden'} lg:block`}>
           <div className="sticky top-4">
             <p className="mb-2 text-xs text-stone-500">
-              {slug ? `recipes/${slug}.md` : 'the new file'} — this is the exact text that the app writes
+              {recipe ? `recipes/${recipe.group}/${recipe.slug}.md` : 'the new file'} — this is the exact text that the app writes
             </p>
             <pre className="max-h-[70vh] overflow-auto rounded border border-stone-200 bg-white p-4 text-xs leading-relaxed">
               {markdown}
