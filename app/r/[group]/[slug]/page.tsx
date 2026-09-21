@@ -16,13 +16,14 @@ import { Stars } from '@/components/Stars'
 export const dynamic = 'force-dynamic'
 
 type Props = {
-  params: Promise<{ slug: string }>
+  params: Promise<{ group: string; slug: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 export default async function RecipePage({ params, searchParams }: Props) {
-  const { slug } = await params
-  const recipe = await readRecipe(slug)
+  const { group, slug } = await params
+  const ref = { group, slug }
+  const recipe = await readRecipe(ref)
   if (!recipe) notFound()
 
   const view = readViewParams(await searchParams, recipe.frontmatter.serves)
@@ -52,7 +53,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
     <main className="mx-auto max-w-5xl p-6 sm:p-8">
       <nav className="no-print mb-8 flex items-center justify-between font-sans text-sm">
         <Link href="/" className="text-stone-500 hover:underline">All recipes</Link>
-        <Link href={`/r/${slug}/edit`} className="text-stone-500 hover:underline">Edit</Link>
+        <Link href={`/r/${group}/${slug}/edit`} className="text-stone-500 hover:underline">Edit</Link>
       </nav>
 
       <header className="max-w-2xl">
@@ -102,7 +103,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
             )}
 
             <section className="no-print mt-12">
-              <CookLogForm slug={slug} />
+              <CookLogForm recipe={ref} />
               {log.length === 0 && <p className="mt-3 font-sans text-sm text-stone-500">No entry yet.</p>}
               <ol className="mt-4 space-y-4">
                 {log.map((entry, i) => (
@@ -111,7 +112,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
                       <time className="font-medium text-stone-700">{entry.date}</time>
                       <Stars rating={entry.rating} />
                       <span className="ml-auto">
-                        <DeleteLogEntry slug={slug} index={i} date={entry.date} />
+                        <DeleteLogEntry recipe={ref} index={i} date={entry.date} />
                       </span>
                     </div>
                     <div className="mt-2 font-serif leading-relaxed whitespace-pre-wrap text-stone-700">
