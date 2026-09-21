@@ -78,6 +78,12 @@ export type Block =
   /** `leading` holds the lines between the heading and the first entry. */
   | { kind: 'cooklog'; headingLine: string; leading: string[]; entries: CookLogEntry[] }
 
+/** The identity of a recipe. A slug alone is not unique across groups. */
+export interface RecipeRef {
+  group: string
+  slug: string
+}
+
 export interface Recipe {
   slug: string
   eol: '\n' | '\r\n'
@@ -87,9 +93,16 @@ export interface Recipe {
   /** The exact frontmatter body, without the `---` fences. `null` when the file has none. */
   frontmatterRaw: string | null
   blocks: Block[]
+  /**
+   * The folder that holds this recipe. The storage module sets it after the
+   * parse. `parseRecipe` leaves it unset, so the field is optional.
+   */
+  group?: string
 }
 
 export interface RecipeSummary {
+  /** The folder that holds this recipe. */
+  group: string
   slug: string
   title: string
   tags: string[]
