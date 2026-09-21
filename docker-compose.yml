@@ -4,9 +4,11 @@ services:
     image: recipe-register:latest
     container_name: recipe-register
     restart: unless-stopped
-    # The CIFS mount forces this uid and gid on every file, so the process
-    # runs as them. Running as root would also work, with less reason to.
-    user: "${RECIPE_UID:-100000}:${RECIPE_GID:-110000}"
+    # The container runs as root. Setting `user` to the uid and gid that the
+    # storage mount forces fails at start with "setgroups: invalid argument",
+    # because the image holds no such user. Root gains nothing on that mount
+    # either: the file server checks the share credential, and the mount forces
+    # its own uid and gid on every file whatever wrote it.
     ports:
       - "${RECIPE_PORT:-8090}:3000"
     environment:
