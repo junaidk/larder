@@ -97,7 +97,14 @@ host address and the paths. Without that file `make deploy` stops and says so.
 | `make -C deploy status` | Show the container |
 | `make -C deploy logs` | Follow the log |
 | `make -C deploy down` | Stop the container |
-| `make -C deploy seed` | Copy `my-recipes` to the server. Never part of a deploy. |
+| `make -C deploy seed` | Copy `my-recipes` to the server. Stops when a file on the server differs. |
+| `make -C deploy seed-new` | Copy only the recipes the server does not hold yet |
+
+The app writes to the recipe files on the server: a cook log entry or an edit
+made in the browser lives only there. So `seed` compares first and stops when
+a file differs, and names each one. `seed-new` adds the files the server does
+not have and touches nothing else. `seed FORCE=1` copies everything and loses
+those edits, which is almost never what you want.
 
 The app has no authentication. Anyone who reaches the port can read and change
 the recipes, so put it only on a network you trust.
