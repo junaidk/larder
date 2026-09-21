@@ -1,7 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtempSync, mkdirSync, rmSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { link } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+
+// `link` passes through to the real implementation by default. Individual
+// tests force a single rejection to exercise a cleanup path.
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  return { ...actual, link: vi.fn(actual.link) }
+})
 
 let dir: string
 
@@ -141,6 +149,12 @@ describe('createRecipe', () => {
   it('rejects an unsafe group name', async () => {
     await expect((await mod()).createRecipe('../etc', 'Focaccia', SIMPLE))
       .rejects.toThrow(/group/i)
+  })
+
+  it('leaves no temporary file behind when the link fails for a reason other than EEXIST', async () => {
+    vi.mocked(link).mockRejectedValueOnce(Object.assign(new Error('input/output error'), { code: 'EIO' }))
+    await expect((await mod()).createRecipe('breads', 'Focaccia', SIMPLE)).rejects.toThrow()
+    expect(readdirSync(join(dir, 'breads'))).toEqual([])
   })
 })
 

@@ -18,7 +18,24 @@ Open http://localhost:3000.
 
 ## Where the recipes live
 
-The app reads and writes `./recipes`. To use another folder, set `RECIPES_DIR`:
+The app reads and writes `./recipes`. Every recipe sits inside a folder, and
+the folder name is the group:
+
+```
+recipes/
+  breads/
+    focaccia.md
+  desserts/
+    lemon-tart.md
+```
+
+The index shows a heading for each folder. To regroup a recipe, change the
+Group box in the editor, or move the file yourself.
+
+A markdown file directly inside `recipes/` is not a recipe location. The index
+names such a file so that it is never hidden.
+
+To use another folder, set `RECIPES_DIR`:
 
 ```bash
 RECIPES_DIR=~/Documents/recipes npm run dev
