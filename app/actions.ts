@@ -89,9 +89,13 @@ export async function saveRecipeAction(
   if (!isSafeName(target)) return { ok: false, error: 'That group name is not valid.' }
 
   if (ref === null) {
-    const created = await createRecipe(target, title, markdown)
-    revalidatePath('/')
-    return { ok: true, ref: created }
+    try {
+      const created = await createRecipe(target, title, markdown)
+      revalidatePath('/')
+      return { ok: true, ref: created }
+    } catch (error) {
+      return { ok: false, error: (error as Error).message }
+    }
   }
 
   if (badRef(ref)) return { ok: false, error: 'That recipe name is not valid.' }
@@ -107,7 +111,11 @@ export async function saveRecipeAction(
     }
   }
 
-  await saveRecipe(moved, parseRecipe(markdown, moved.slug))
+  try {
+    await saveRecipe(moved, parseRecipe(markdown, moved.slug))
+  } catch (error) {
+    return { ok: false, error: (error as Error).message }
+  }
 
   revalidatePath('/')
   revalidatePath(paths(ref))
