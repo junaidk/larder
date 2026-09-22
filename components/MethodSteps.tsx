@@ -26,15 +26,15 @@ export function MethodSteps({ lead, steps }: { lead: ReactNode; steps: string[] 
                 type="button"
                 onClick={() => toggle(i)}
                 aria-pressed={struck}
-                className={`flex w-full gap-4 rounded px-1 py-1 text-left hover:bg-stone-100 ${
+                className={`flex w-full gap-4 rounded px-1 py-1 text-left hover:bg-raised ${
                   struck ? 'opacity-40' : ''
                 }`}
               >
-                <span className="w-8 shrink-0 pt-0.5 text-right font-sans text-2xl leading-none font-light tabular-nums text-stone-300">
+                <span className="w-8 shrink-0 pt-0.5 text-right font-sans text-2xl leading-none font-light tabular-nums text-ink-dim">
                   {i + 1}
                 </span>
                 <span
-                  className={`font-serif text-[1.05rem] leading-relaxed whitespace-pre-wrap text-stone-800 ${
+                  className={`font-serif text-[1.05rem] leading-relaxed whitespace-pre-wrap text-ink ${
                     struck ? 'line-through' : ''
                   }`}
                 >

@@ -8,6 +8,75 @@
   --font-serif: Charter, var(--font-serif-face), "Bitstream Charter", Georgia, serif;
 }
 
+/* The colours have names, not shades, so a theme is a change of values and not
+   a change of every element. `@theme inline` keeps each utility pointing at the
+   variable below it, which is what lets the attribute switch them while the page
+   is open. */
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-ink-dim: var(--ink-dim);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-line-hover: var(--line-hover);
+  --color-invert-surface: var(--invert-surface);
+  --color-invert-surface-hover: var(--invert-surface-hover);
+  --color-invert-ink: var(--invert-ink);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-accent: var(--accent);
+}
+
+/* The light theme holds the values the app had before the dark theme. */
+[data-theme="light"] {
+  --page: #fafaf9;
+  --surface: #ffffff;
+  --raised: #f5f5f4;
+  --ink: #1c1917;
+  --ink-soft: #57534e;
+  --ink-muted: #78716c;
+  --ink-faint: #a8a29e;
+  --ink-dim: #d6d3d1;
+  --line: #e7e5e4;
+  --line-strong: #d6d3d1;
+  --line-hover: #a8a29e;
+  --invert-surface: #1c1917;
+  --invert-surface-hover: #44403c;
+  --invert-ink: #ffffff;
+  --danger: #b91c1c;
+  --danger-surface: #fef2f2;
+  --accent: #d97706;
+}
+
+/* The dark theme keeps the warm cast, so the app reads as the same app at night.
+   The page is not pure black: a little warmth stops the text edges shimmering.
+   Every text value clears 4.5:1 against the page, except --ink-dim, which only
+   carries the large step numerals and the unfilled stars and clears 3:1. */
+[data-theme="dark"] {
+  --page: #1c1917;
+  --surface: #262322;
+  --raised: #322e2c;
+  --ink: #e7e5e4;
+  --ink-soft: #bdb7b2;
+  --ink-muted: #a39c96;
+  --ink-faint: #8f8783;
+  --ink-dim: #6e6763;
+  --line: #3a3533;
+  --line-strong: #4a4441;
+  --line-hover: #6e6763;
+  --invert-surface: #e7e5e4;
+  --invert-surface-hover: #d6d3d1;
+  --invert-ink: #1c1917;
+  --danger: #f87171;
+  --danger-surface: #3a2422;
+  --accent: #f59e0b;
+}
+
 /* The ingredients hold their place beside a scrolling method, but only when
    the page is in two columns and the screen is wide enough for them. */
 @media (min-width: 1024px) {
@@ -26,6 +95,14 @@
     background: #fff !important;
     color: #000 !important;
     font-size: 12pt;
+  }
+
+  /* Printing from the dark theme must still give paper you can read, so the
+     theme colours are dropped rather than sent to the printer. */
+  *, *::before, *::after {
+    background: transparent !important;
+    color: #000 !important;
+    border-color: #999 !important;
   }
 
   main { max-width: none !important; padding: 0 !important; }

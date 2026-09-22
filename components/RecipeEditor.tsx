@@ -93,21 +93,21 @@ export function RecipeEditor({
     router.refresh()
   }
 
-  const field = 'mt-1 block w-full rounded border border-stone-300 bg-white px-3 py-2'
+  const field = 'mt-1 block w-full rounded border border-line-strong bg-surface px-3 py-2'
 
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">{recipe ? 'Edit recipe' : 'New recipe'}</h1>
         <div className="flex items-center gap-3">
-          <div className="flex rounded bg-stone-100 p-1 lg:hidden">
+          <div className="flex rounded bg-raised p-1 lg:hidden">
             {(['form', 'file'] as const).map((value) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => setPane(value)}
                 aria-pressed={pane === value}
-                className={`rounded px-3 py-1 text-sm ${pane === value ? 'bg-white shadow' : ''}`}
+                className={`rounded px-3 py-1 text-sm ${pane === value ? 'bg-surface shadow' : ''}`}
               >
                 {value === 'form' ? 'Form' : 'File'}
               </button>
@@ -115,7 +115,7 @@ export function RecipeEditor({
           </div>
           <Link
             href={recipe ? `/r/${recipe.group}/${recipe.slug}` : '/'}
-            className="rounded px-3 py-2 text-sm text-stone-600 hover:text-stone-900"
+            className="rounded px-3 py-2 text-sm text-ink-soft hover:text-ink"
           >
             Cancel
           </Link>
@@ -123,14 +123,14 @@ export function RecipeEditor({
             type="button"
             onClick={save}
             disabled={busy}
-            className="rounded bg-stone-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+            className="rounded bg-invert-surface px-4 py-2 text-sm text-invert-ink disabled:opacity-50"
           >
             {busy ? 'Saving…' : 'Save recipe'}
           </button>
         </div>
       </div>
 
-      {error && <p role="alert" className="mb-4 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && <p role="alert" className="mb-4 rounded bg-danger-surface px-3 py-2 text-sm text-danger">{error}</p>}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className={`space-y-5 ${pane === 'form' ? '' : 'hidden'} lg:block`}>
@@ -183,7 +183,7 @@ export function RecipeEditor({
 
           <fieldset>
             <legend className="text-sm font-medium">Ingredients</legend>
-            <p className="mb-2 text-xs text-stone-500">
+            <p className="mb-2 text-xs text-ink-muted">
               Write one ingredient on each line, as you would say it. Start a line
               with <code>### </code> to begin a group.
             </p>
@@ -196,11 +196,11 @@ export function RecipeEditor({
                       onChange={(e) => editList('ingredientLines', i, e.target.value)}
                       placeholder="500 g strong white flour"
                       aria-label={`Ingredient ${i + 1}`}
-                      className="flex-1 rounded border border-stone-300 bg-white px-3 py-2"
+                      className="flex-1 rounded border border-line-strong bg-surface px-3 py-2"
                     />
-                    <button type="button" onClick={() => removeFrom('ingredientLines', i)} aria-label={`Remove ingredient ${i + 1}`} className="px-2 text-stone-400 hover:text-stone-700">×</button>
+                    <button type="button" onClick={() => removeFrom('ingredientLines', i)} aria-label={`Remove ingredient ${i + 1}`} className="px-2 text-ink-faint hover:text-ink-soft">×</button>
                   </div>
-                  <p className="mt-0.5 h-4 pl-1 text-xs leading-4 text-stone-500">
+                  <p className="mt-0.5 h-4 pl-1 text-xs leading-4 text-ink-muted">
                     {hint(line) || '\u00a0'}
                   </p>
                 </li>
@@ -209,7 +209,7 @@ export function RecipeEditor({
             <button
               type="button"
               onClick={() => addTo('ingredientLines')}
-              className="mt-2 rounded border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:border-stone-400"
+              className="mt-2 rounded border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink-soft hover:border-line-hover"
             >
               + Add ingredient
             </button>
@@ -220,22 +220,22 @@ export function RecipeEditor({
             <ol className="mt-2 space-y-2">
               {state.methodSteps.map((step, i) => (
                 <li key={i} className="flex gap-2">
-                  <span className="w-5 pt-2 text-right text-sm text-stone-400">{i + 1}</span>
+                  <span className="w-5 pt-2 text-right text-sm text-ink-faint">{i + 1}</span>
                   <textarea
                     value={step}
                     onChange={(e) => editList('methodSteps', i, e.target.value)}
                     rows={2}
                     aria-label={`Step ${i + 1}`}
-                    className="flex-1 rounded border border-stone-300 bg-white px-3 py-2"
+                    className="flex-1 rounded border border-line-strong bg-surface px-3 py-2"
                   />
-                  <button type="button" onClick={() => removeFrom('methodSteps', i)} aria-label={`Remove step ${i + 1}`} className="px-2 text-stone-400 hover:text-stone-700">×</button>
+                  <button type="button" onClick={() => removeFrom('methodSteps', i)} aria-label={`Remove step ${i + 1}`} className="px-2 text-ink-faint hover:text-ink-soft">×</button>
                 </li>
               ))}
             </ol>
             <button
               type="button"
               onClick={() => addTo('methodSteps')}
-              className="mt-2 rounded border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:border-stone-400"
+              className="mt-2 rounded border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink-soft hover:border-line-hover"
             >
               + Add step
             </button>
@@ -248,10 +248,10 @@ export function RecipeEditor({
 
         <section className={`${pane === 'file' ? '' : 'hidden'} lg:block`}>
           <div className="sticky top-4">
-            <p className="mb-2 text-xs text-stone-500">
+            <p className="mb-2 text-xs text-ink-muted">
               {recipe ? `recipes/${group.trim() || recipe.group}/${recipe.slug}.md` : 'the new file'} — this is the exact text that the app writes
             </p>
-            <pre className="max-h-[70vh] overflow-auto rounded border border-stone-200 bg-white p-4 text-xs leading-relaxed">
+            <pre className="max-h-[70vh] overflow-auto rounded border border-line bg-surface p-4 text-xs leading-relaxed">
               {markdown}
             </pre>
           </div>

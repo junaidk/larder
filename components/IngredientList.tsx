@@ -28,7 +28,7 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
       {groups.map((group, g) => (
         <div key={g}>
           {group.name && (
-            <h3 className="mb-2 pl-12 font-sans text-xs font-medium tracking-wide text-stone-500 uppercase">
+            <h3 className="mb-2 pl-12 font-sans text-xs font-medium tracking-wide text-ink-muted uppercase">
               {group.name}
             </h3>
           )}
@@ -43,34 +43,34 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
                     onClick={() => toggle(key)}
                     aria-pressed={struck}
                     aria-label={p.line}
-                    className={`flex w-full gap-4 rounded px-1 py-1 text-left hover:bg-stone-100 ${
+                    className={`flex w-full gap-4 rounded px-1 py-1 text-left hover:bg-raised ${
                       struck ? 'opacity-40' : ''
                     }`}
                   >
                     {/* Same width and alignment as a step numeral, so the dot
                         sits where a number sits in the method. */}
                     <span aria-hidden className="flex w-8 shrink-0 justify-end pt-[0.45rem]">
-                      <span className="h-2 w-2 rounded-full bg-stone-300" />
+                      <span className="h-2 w-2 rounded-full bg-ink-dim" />
                     </span>
                     {p.text ? (
                       // A line the parser could not read has no amount, so it
                       // uses the whole width instead of an empty column.
                       <span
-                        className={`font-serif text-stone-800 ${struck ? 'line-through' : ''}`}
+                        className={`font-serif text-ink ${struck ? 'line-through' : ''}`}
                       >
                         {p.text}
                       </span>
                     ) : (
                       <span
-                        className={`min-w-0 font-serif text-stone-800 ${struck ? 'line-through' : ''}`}
+                        className={`min-w-0 font-serif text-ink ${struck ? 'line-through' : ''}`}
                       >
-                        <span className="font-sans text-sm font-medium tabular-nums text-stone-900">
+                        <span className="font-sans text-sm font-medium tabular-nums text-ink">
                           {p.amount}
                         </span>
-                        {p.unit && <span className="font-sans text-sm text-stone-400"> {p.unit}</span>}
+                        {p.unit && <span className="font-sans text-sm text-ink-faint"> {p.unit}</span>}
                         {' '}
                         {p.item}
-                        {p.prep && <span className="text-stone-500 italic">, {p.prep}</span>}
+                        {p.prep && <span className="text-ink-muted italic">, {p.prep}</span>}
                       </span>
                     )}
                   </button>
