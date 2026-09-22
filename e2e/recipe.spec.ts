@@ -126,3 +126,31 @@ test('changing the group moves the file and the URL', async ({ page }) => {
   const body = (t: string) => t.slice(t.indexOf('# Test Loaf'))
   expect(body(after)).toBe(body(before))
 })
+
+test('the theme opens dark, switches, and holds the choice', async ({ page }) => {
+  const html = page.locator('html')
+
+  // Nothing is stored on a first visit, so the app opens dark.
+  await page.goto('/')
+  await expect(html).toHaveAttribute('data-theme', 'dark')
+
+  // The control names the theme it switches to.
+  await page.getByRole('button', { name: 'Switch to the light theme' }).click()
+  await expect(html).toHaveAttribute('data-theme', 'light')
+
+  // The choice survives a reload. The page must never paint the other theme
+  // first, so the attribute is already right on the very first frame.
+  await page.reload()
+  await expect(html).toHaveAttribute('data-theme', 'light')
+
+  // The choice carries to a recipe page, which holds its own copy of the
+  // control among the view controls. An earlier test moved this recipe from
+  // breads to mains, so that is where it now lives.
+  await page.goto('/r/mains/test-loaf')
+  await expect(html).toHaveAttribute('data-theme', 'light')
+  await page.getByRole('button', { name: 'Switch to the dark theme' }).click()
+  await expect(html).toHaveAttribute('data-theme', 'dark')
+
+  await page.goto('/')
+  await expect(html).toHaveAttribute('data-theme', 'dark')
+})

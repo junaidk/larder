@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { parseFactor } from '@/lib/units/scale'
 import { resolveUnits } from '@/lib/view/units'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 const STORAGE_KEY = 'larder:units'
 const COLUMNS_KEY = 'larder:columns'
@@ -65,7 +66,7 @@ export function ViewControls({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-stone-500">Units</span>
+        <span className="text-sm text-ink-muted">Units</span>
         {(['metric', 'imperial'] as const).map((value) => (
           <button
             key={value}
@@ -76,14 +77,14 @@ export function ViewControls({
             }}
             aria-pressed={units === value}
             className={`rounded px-3 py-1 text-sm ${
-              units === value ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-700'
+              units === value ? 'bg-invert-surface text-invert-ink' : 'bg-raised text-ink-soft'
             }`}
           >
             {value === 'metric' ? 'Metric' : 'Imperial'}
           </button>
         ))}
 
-        <span className="ml-4 text-sm text-stone-500">Scale</span>
+        <span className="ml-4 text-sm text-ink-muted">Scale</span>
         <input
           type="text"
           inputMode="decimal"
@@ -92,7 +93,7 @@ export function ViewControls({
           placeholder="1"
           value={factorText}
           onChange={(e) => handleFactorChange(e.target.value)}
-          className="w-24 rounded border border-stone-300 px-2 py-1 text-sm"
+          className="w-24 rounded border border-line-strong px-2 py-1 text-sm"
         />
         <datalist id="scale-presets">
           <option value="1/2" />
@@ -101,8 +102,8 @@ export function ViewControls({
         </datalist>
 
         {/* Only a wide screen has room for two columns. */}
-        <span className="ml-4 hidden text-sm text-stone-500 lg:inline">Layout</span>
-        <div className="hidden rounded bg-stone-100 p-1 lg:flex">
+        <span className="ml-4 hidden text-sm text-ink-muted lg:inline">Layout</span>
+        <div className="hidden rounded bg-raised p-1 lg:flex">
           {([['two', 'Two columns'], ['one', 'One column']] as const).map(([value, label]) => (
             <button
               key={value}
@@ -110,7 +111,7 @@ export function ViewControls({
               onClick={() => onColumns(value)}
               aria-pressed={columns === value}
               className={`rounded px-3 py-1 text-sm ${
-                columns === value ? 'bg-white shadow' : 'text-stone-600'
+                columns === value ? 'bg-surface shadow' : 'text-ink-soft'
               }`}
             >
               {label}
@@ -125,11 +126,15 @@ export function ViewControls({
               try { localStorage.removeItem(STORAGE_KEY) } catch { /* private mode */ }
               set({ units: null, scale: null, serves: null })
             }}
-            className="ml-2 rounded px-3 py-1 text-sm text-stone-500 underline hover:text-stone-900"
+            className="ml-2 rounded px-3 py-1 text-sm text-ink-muted underline hover:text-ink"
           >
             Reset
           </button>
         )}
+
+        <span className="ml-auto">
+          <ThemeToggle />
+        </span>
 
       </div>
 

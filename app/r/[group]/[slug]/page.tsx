@@ -55,35 +55,35 @@ export default async function RecipePage({ params, searchParams }: Props) {
   return (
     <main className="mx-auto max-w-5xl p-6 sm:p-8">
       <nav className="no-print mb-8 flex items-center justify-between font-sans text-sm">
-        <Link href="/" className="text-stone-500 hover:underline">All recipes</Link>
-        <Link href={`/r/${group}/${slug}/edit`} className="text-stone-500 hover:underline">Edit</Link>
+        <Link href="/" className="text-ink-muted hover:underline">All recipes</Link>
+        <Link href={`/r/${group}/${slug}/edit`} className="text-ink-muted hover:underline">Edit</Link>
       </nav>
 
       <header className="max-w-2xl">
-        <h1 className="font-serif text-4xl leading-tight font-semibold tracking-tight text-stone-900">
+        <h1 className="font-serif text-4xl leading-tight font-semibold tracking-tight text-ink">
           {fm.title || slug}
         </h1>
 
         {description && (
-          <div className="mt-4 text-lg text-stone-600">
+          <div className="mt-4 text-lg text-ink-soft">
             <Markdown>{description}</Markdown>
           </div>
         )}
 
-        <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 font-sans text-sm text-stone-500">
-          {fm.serves !== null && <div><dt className="inline">Serves </dt><dd className="inline text-stone-700">{fm.serves}</dd></div>}
-          {fm.prep_time && <div><dt className="inline">Prep </dt><dd className="inline text-stone-700">{fm.prep_time}</dd></div>}
-          {fm.cook_time && <div><dt className="inline">Cook </dt><dd className="inline text-stone-700">{fm.cook_time}</dd></div>}
+        <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 font-sans text-sm text-ink-muted">
+          {fm.serves !== null && <div><dt className="inline">Serves </dt><dd className="inline text-ink-soft">{fm.serves}</dd></div>}
+          {fm.prep_time && <div><dt className="inline">Prep </dt><dd className="inline text-ink-soft">{fm.prep_time}</dd></div>}
+          {fm.cook_time && <div><dt className="inline">Cook </dt><dd className="inline text-ink-soft">{fm.cook_time}</dd></div>}
           {fm.source && (
             <div>
               <dt className="inline">Source </dt>
-              <dd className="inline text-stone-700">
+              <dd className="inline text-ink-soft">
                 {sourceLink(fm.source) ? (
                   <a
                     href={sourceLink(fm.source)!}
                     target="_blank"
                     rel="noreferrer"
-                    className="underline decoration-stone-300 underline-offset-2 hover:decoration-stone-600"
+                    className="underline decoration-line-strong underline-offset-2 hover:decoration-ink-soft"
                   >
                     {fm.source}
                   </a>
@@ -99,7 +99,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
       <RecipeLayout
         ingredients={
           <section className="recipe-ingredients">
-            <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
+            <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-ink-faint uppercase">
               Ingredients
             </h2>
             <IngredientList groups={groups} />
@@ -108,7 +108,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
         body={
           <div className="min-w-0">
             <section className="lg:min-h-80">
-              <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
+              <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-ink-faint uppercase">
                 Method
               </h2>
               <MethodSteps lead={<Markdown>{method.lead.join('\n')}</Markdown>} steps={method.steps} />
@@ -116,7 +116,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
 
             {notes && (
               <section className="mt-10">
-                <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase">
+                <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-ink-faint uppercase">
                   Notes
                 </h2>
                 <Markdown>{notes}</Markdown>
@@ -125,12 +125,12 @@ export default async function RecipePage({ params, searchParams }: Props) {
 
             <section className="no-print mt-12">
               <CookLogForm recipe={ref} />
-              {log.length === 0 && <p className="mt-3 font-sans text-sm text-stone-500">No entry yet.</p>}
+              {log.length === 0 && <p className="mt-3 font-sans text-sm text-ink-muted">No entry yet.</p>}
               <ol className="mt-4 space-y-4">
                 {log.map((entry, i) => (
-                  <li key={`${entry.date}-${i}`} className="rounded-lg border border-stone-200 bg-white p-4">
+                  <li key={`${entry.date}-${i}`} className="rounded-lg border border-line bg-surface p-4">
                     <div className="flex items-center gap-3 font-sans text-sm">
-                      <time className="font-medium text-stone-700">{entry.date}</time>
+                      <time className="font-medium text-ink-soft">{entry.date}</time>
                       <Stars rating={entry.rating} />
                       <span className="ml-auto">
                         <DeleteLogEntry recipe={ref} index={i} date={entry.date} />

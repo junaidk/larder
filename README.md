@@ -76,6 +76,17 @@ The app has no authentication. Do not give it a public address. Bind it to
 ssh -L 3000:127.0.0.1:3000 user@your-vps
 ```
 
+## The theme
+
+The app opens in the dark theme. The control in the header, and in the
+controls row of a recipe, switches between dark and light.
+
+The choice belongs to the browser, not to the recipe files. It sits in
+browser storage under `larder:theme`, beside the unit and layout choices. So
+each device keeps its own theme, and a shared server holds none of them.
+
+A printed recipe is always black on white, whichever theme the screen shows.
+
 ## The file format
 
 See `docs/superpowers/specs/2026-09-20-recipe-register-design.md`, section 4.

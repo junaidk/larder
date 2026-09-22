@@ -27,13 +27,13 @@ export function DeleteLogEntry({
 
   return (
     <span className="flex items-center gap-2">
-      {error && <span role="alert" className="text-xs text-red-700">{error}</span>}
+      {error && <span role="alert" className="text-xs text-danger">{error}</span>}
       <button
         type="button"
         onClick={remove}
         disabled={busy}
         aria-label={`Delete the entry for ${date}`}
-        className="px-1 text-stone-400 hover:text-red-700 disabled:opacity-50"
+        className="px-1 text-ink-faint hover:text-danger disabled:opacity-50"
       >
         ×
       </button>

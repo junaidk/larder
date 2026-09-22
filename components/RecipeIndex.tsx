@@ -82,13 +82,13 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search title or ingredient"
           aria-label="Search recipes"
-          className="min-w-64 flex-1 rounded border border-stone-300 bg-white px-3 py-2"
+          className="min-w-64 flex-1 rounded border border-line-strong bg-surface px-3 py-2"
         />
         <select
           value={tag}
           onChange={(e) => setTag(e.target.value)}
           aria-label="Filter by tag"
-          className="rounded border border-stone-300 bg-white px-3 py-2"
+          className="rounded border border-line-strong bg-surface px-3 py-2"
         >
           <option value="">All tags</option>
           {tags.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -97,7 +97,7 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
           value={minRating}
           onChange={(e) => setMinRating(Number(e.target.value))}
           aria-label="Filter by rating"
-          className="rounded border border-stone-300 bg-white px-3 py-2"
+          className="rounded border border-line-strong bg-surface px-3 py-2"
         >
           <option value={0}>Any rating</option>
           {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} stars and up</option>)}
@@ -105,7 +105,7 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
       </div>
 
       <div className="flex items-center justify-between">
-        <p className="text-sm text-stone-500">
+        <p className="text-sm text-ink-muted">
           {shown.length} of {recipes.length} recipes
         </p>
         <div className="flex items-center gap-2">
@@ -116,12 +116,12 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
               const allClosed = collapseAllLabel(names, collapsed, filtering) === 'Expand all'
               remember(allClosed ? [] : names)
             }}
-            className="rounded px-3 py-1 text-sm text-stone-600 hover:text-stone-900"
+            className="rounded px-3 py-1 text-sm text-ink-soft hover:text-ink"
           >
             {collapseAllLabel(grouped.map(([group]) => group), collapsed, filtering)}
           </button>
 
-          <div className="flex rounded bg-stone-100 p-1">
+          <div className="flex rounded bg-raised p-1">
           {(['grid', 'list'] as const).map((value) => (
             <button
               key={value}
@@ -129,7 +129,7 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
               onClick={() => chooseView(value)}
               aria-pressed={view === value}
               className={`rounded px-3 py-1 text-sm capitalize ${
-                view === value ? 'bg-white shadow' : 'text-stone-600'
+                view === value ? 'bg-surface shadow' : 'text-ink-soft'
               }`}
             >
               {value}
@@ -148,7 +148,7 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
               type="button"
               onClick={() => remember(toggled(collapsed, group))}
               aria-expanded={open}
-              className="flex items-center gap-2 font-sans text-xs font-medium tracking-widest text-stone-400 uppercase hover:text-stone-600"
+              className="flex items-center gap-2 font-sans text-xs font-medium tracking-widest text-ink-faint uppercase hover:text-ink-soft"
             >
               <span
                 aria-hidden
@@ -156,7 +156,7 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
               >
                 ›
               </span>
-              {group} <span className="text-stone-300">({items.length})</span>
+              {group} <span className="text-ink-dim">({items.length})</span>
             </button>
           </h2>
 
@@ -166,16 +166,16 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
                 <li key={`${r.group}/${r.slug}`} className="h-full">
                   <Link
                     href={`/r/${r.group}/${r.slug}`}
-                    className="flex h-full flex-col rounded-lg border border-stone-200 bg-white p-4 hover:border-stone-400"
+                    className="flex h-full flex-col rounded-lg border border-line bg-surface p-4 hover:border-line-hover"
                   >
                     <h3 className="font-medium">{r.title}</h3>
                     <div className="mt-2 flex items-center justify-between text-sm">
                       <Stars rating={r.latestRating} />
-                      <span className="text-stone-500">{cookedLabel(r.timesCooked)}</span>
+                      <span className="text-ink-muted">{cookedLabel(r.timesCooked)}</span>
                     </div>
                     <p className="mt-auto flex flex-wrap gap-1 pt-2">
                       {r.tags.map((t) => (
-                        <span key={t} className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+                        <span key={t} className="rounded bg-raised px-2 py-0.5 text-xs text-ink-soft">
                           {t}
                         </span>
                       ))}
@@ -190,19 +190,19 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
                 <li key={`${r.group}/${r.slug}`}>
                   <Link
                     href={`/r/${r.group}/${r.slug}`}
-                    className="flex flex-col gap-2 rounded-lg border border-stone-200 bg-white px-4 py-3 hover:border-stone-400 sm:flex-row sm:items-center sm:gap-4"
+                    className="flex flex-col gap-2 rounded-lg border border-line bg-surface px-4 py-3 hover:border-line-hover sm:flex-row sm:items-center sm:gap-4"
                   >
                     <h3 className="font-medium sm:w-64 sm:shrink-0">{r.title}</h3>
                     <p className="flex flex-1 flex-wrap gap-1">
                       {r.tags.map((t) => (
-                        <span key={t} className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+                        <span key={t} className="rounded bg-raised px-2 py-0.5 text-xs text-ink-soft">
                           {t}
                         </span>
                       ))}
                     </p>
                     <div className="flex items-center gap-4 text-sm sm:shrink-0">
                       <Stars rating={r.latestRating} />
-                      <span className="text-stone-500 sm:w-28 sm:text-right">
+                      <span className="text-ink-muted sm:w-28 sm:text-right">
                         {cookedLabel(r.timesCooked)}
                       </span>
                     </div>
@@ -216,7 +216,7 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
       })}
 
       {shown.length === 0 && (
-        <p className="rounded border border-dashed border-stone-300 p-8 text-center text-stone-500">
+        <p className="rounded border border-dashed border-line-strong p-8 text-center text-ink-muted">
           No recipe matches the filters.
         </p>
       )}

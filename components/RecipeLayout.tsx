@@ -34,7 +34,7 @@ export function RecipeLayout({
 
   return (
     <>
-      <div className="no-print my-8 border-y border-stone-200 py-4">
+      <div className="no-print my-8 border-y border-line py-4">
         <Suspense fallback={null}>
           <ViewControls columns={columns} onColumns={choose} />
         </Suspense>
