@@ -269,8 +269,11 @@ describe('buildMarkdown keeps what the form does not model', () => {
     const existing = parseRecipe(source, 'x')
 
     const state = stateFromRecipe(existing)
-    expect(state.methodSteps).toEqual(['Sweat the onion\n   until soft.', 'Add tomato.'])
-    expect(state.methodLead).toEqual(['### For the sauce'])
+    // The heading is a form entry now, so the editor can show and change it.
+    expect(state.methodSteps).toEqual([
+      '### For the sauce', 'Sweat the onion\n   until soft.', 'Add tomato.',
+    ])
+    expect(state.methodLead).toEqual([])
 
     expect(buildMarkdown(state, existing, TODAY)).toBe(source)
   })
@@ -343,12 +346,12 @@ describe('the last three findings before merge', () => {
     ].join('\n')
     const existing = parseRecipe(source, 'x')
     const state = stateFromRecipe(existing)
-    expect(state.methodLead).toEqual(['### Stage one'])
-    expect(state.methodSteps).toEqual(['A.', 'B.', 'C.'])
+    expect(state.methodLead).toEqual([])
+    expect(state.methodSteps).toEqual(['### Stage one', 'A.', 'B.', 'C.'])
 
     // Edit one step only. The other steps must keep their original,
     // tight spacing: no blank line inserted between them.
-    state.methodSteps = ['A.', 'B2.', 'C.']
+    state.methodSteps = ['### Stage one', 'A.', 'B2.', 'C.']
 
     const out = buildMarkdown(state, existing, TODAY)
     expect(out).toContain('### Stage one\n\n1. A.\n2. B2.\n3. C.\n')
@@ -437,5 +440,58 @@ describe('a load-then-save with no edits', () => {
 
     const out = buildMarkdown(state, recipe, '2026-09-21')
     expect(serializeRecipe(parseRecipe(out, 'fixture'))).toBe(out)
+  })
+})
+
+describe('method section headings', () => {
+  const TODAY = '2026-09-20'
+
+  it('carries a heading between two steps through without a change', () => {
+    const source = [
+      '---', 'title: X', 'updated: 2026-09-20', '---', '',
+      '# X', '',
+      '## Method', '',
+      '### Dough', '',
+      '1. Mix.', '2. Rest.', '',
+      '### Bake', '',
+      '1. Bake it.', '',
+    ].join('\n')
+    const existing = parseRecipe(source, 'x')
+
+    const state = stateFromRecipe(existing)
+    expect(state.methodSteps).toEqual(['### Dough', 'Mix.', 'Rest.', '### Bake', 'Bake it.'])
+
+    expect(buildMarkdown(state, existing, TODAY)).toBe(source)
+  })
+
+  // The reader asked for the count to start again in each section.
+  it('starts the numbers again below a heading it writes', () => {
+    const state = emptyState()
+    state.title = 'X'
+    state.methodSteps = ['### Dough', 'Mix.', 'Rest.', '### Bake', 'Heat the oven.', 'Bake it.']
+
+    const out = buildMarkdown(state, null, TODAY)
+    expect(out).toContain('### Dough\n\n1. Mix.\n2. Rest.\n\n### Bake\n\n1. Heat the oven.\n2. Bake it.')
+  })
+
+  it('renumbers the section that follows a heading the writer removed', () => {
+    const source = [
+      '---', 'title: X', 'updated: 2026-09-20', '---', '',
+      '# X', '',
+      '## Method', '',
+      '### Dough', '',
+      '1. Mix.', '',
+      '### Bake', '',
+      '1. Bake it.', '',
+    ].join('\n')
+    const existing = parseRecipe(source, 'x')
+    const state = stateFromRecipe(existing)
+
+    // Take out the second heading. Its step joins the section above it.
+    state.methodSteps = ['### Dough', 'Mix.', 'Bake it.']
+
+    const out = buildMarkdown(state, existing, TODAY)
+    expect(out).toContain('### Dough\n\n1. Mix.\n\n2. Bake it.')
+    expect(out).not.toContain('### Bake')
   })
 })

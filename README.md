@@ -87,6 +87,22 @@ each device keeps its own theme, and a shared server holds none of them.
 
 A printed recipe is always black on white, whichever theme the screen shows.
 
+## Writing a recipe
+
+The editor holds two boxes.
+
+**Ingredients.** One ingredient on each line. A line that starts with `###`
+begins a group. Below the box the app says how many lines it understood, and
+names the lines that it will keep exactly as written. Those lines do not
+answer a change of scale or of units.
+
+**Method.** A blank line starts the next step, so one step can hold several
+lines. A line that starts with `###` begins a section. The numbers start
+again at 1 in each section.
+
+The pane on the right shows either the recipe as it will read, or the exact
+text of the file.
+
 ## The file format
 
 See `docs/superpowers/specs/2026-09-20-recipe-register-design.md`, section 4.

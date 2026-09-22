@@ -30,6 +30,7 @@
   --color-danger: var(--danger);
   --color-danger-surface: var(--danger-surface);
   --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
 }
 
 /* The light theme holds the values the app had before the dark theme. */
@@ -51,6 +52,7 @@
   --danger: #b91c1c;
   --danger-surface: #fef2f2;
   --accent: #d97706;
+  --accent-text: #b45309;
 }
 
 /* The dark theme keeps the warm cast, so the app reads as the same app at night.
@@ -75,6 +77,7 @@
   --danger: #f87171;
   --danger-surface: #3a2422;
   --accent: #f59e0b;
+  --accent-text: #f59e0b;
 }
 
 /* The ingredients hold their place beside a scrolling method, but only when

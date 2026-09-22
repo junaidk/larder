@@ -67,7 +67,7 @@ export function IngredientList({ groups }: { groups: DisplayGroup[] }) {
                         <span className="font-sans text-sm font-medium tabular-nums text-ink">
                           {p.amount}
                         </span>
-                        {p.unit && <span className="font-sans text-sm text-ink-faint"> {p.unit}</span>}
+                        {p.unit && <span className="font-sans text-sm text-accent-text"> {p.unit}</span>}
                         {' '}
                         {p.item}
                         {p.prep && <span className="text-ink-muted italic">, {p.prep}</span>}
