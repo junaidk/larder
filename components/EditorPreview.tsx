@@ -59,7 +59,7 @@ export function EditorPreview({
                       </span>
                     )}
                     {parsed.unitRaw && (
-                      <span className="font-sans text-sm text-ink-faint">{parsed.unitRaw} </span>
+                      <span className="font-sans text-sm text-accent-text">{parsed.unitRaw} </span>
                     )}
                     {parsed.item ?? text}
                     {parsed.prep && <span className="text-ink-muted italic">, {parsed.prep}</span>}
