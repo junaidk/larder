@@ -1,5 +1,6 @@
 import type { Block, Frontmatter, IngredientLine, Recipe } from '@/lib/recipe/types'
 import { splitMethodText } from '@/lib/view/method'
+import { isMethodHeading } from '@/lib/view/editor'
 import { emptyFrontmatter } from '@/lib/recipe/types'
 import { serializeFrontmatter } from '@/lib/recipe/frontmatter'
 import { ingredientText, parseIngredientLine } from '@/lib/recipe/ingredient'
@@ -16,8 +17,9 @@ export interface EditorState {
   /** One entry per line. A `###` line starts an ingredient group. */
   ingredientLines: string[]
   /**
-   * One entry per numbered step. A step keeps its wrapped continuation
-   * lines, so the text of a step can hold a line break.
+   * One entry per step, and one per section heading. A heading entry holds
+   * the `### ` marker. A step keeps its wrapped continuation lines, so the
+   * text of a step can hold a line break.
    */
   methodSteps: string[]
   /**
@@ -41,9 +43,13 @@ const GROUP_RE = /^###\s+/
 const LIST_RE = /^\s*[-*+]\s+\S/
 const TITLE_RE = /^#\s+/
 /** A numbered step starts here. Every other line belongs to the step above. */
-/** Read the method as a lead block and a list of steps. */
+/** Read the method as a lead block and a list of form entries. */
 function readMethod(recipe: Recipe): { lead: string[]; steps: string[] } {
-  return splitMethodText(methodText(recipe))
+  const { lead, items } = splitMethodText(methodText(recipe))
+  return {
+    lead,
+    steps: items.map((i) => (i.kind === 'heading' ? `### ${i.text}` : i.text)),
+  }
 }
 
 export function stateFromRecipe(recipe: Recipe): EditorState {
@@ -331,12 +337,26 @@ function looseMethod(recipe: Recipe): boolean {
   return first !== -1 && /\n[ \t]*\n[ \t]*\d+[.)]\s/.test(text.slice(first))
 }
 
+/**
+ * Write the method.
+ *
+ * A section heading gets an empty line above and below it, so the file reads
+ * as markdown reads. The step numbers start again at 1 below every heading,
+ * which is what the reader sees on the recipe page.
+ */
 function methodBlock(headingLine: string, lead: string[], steps: string[], loose: boolean): Block {
   const body: string[] = ['']
   if (lead.length > 0) body.push(...lead, '')
-  steps.forEach((step, i) => {
-    if (i > 0 && loose) body.push('')
-    body.push(...`${i + 1}. ${step}`.split('\n'))
+  let number = 0
+  steps.forEach((step) => {
+    if (isMethodHeading(step)) {
+      number = 0
+      body.push('', step.trim(), '')
+      return
+    }
+    number += 1
+    if (number > 1 && loose) body.push('')
+    body.push(...`${number}. ${step}`.split('\n'))
   })
   body.push('')
   return { kind: 'method', headingLine, lines: collapse(body) }

@@ -111,7 +111,7 @@ export default async function RecipePage({ params, searchParams }: Props) {
               <h2 className="mb-4 font-sans text-xs font-medium tracking-widest text-ink-faint uppercase">
                 Method
               </h2>
-              <MethodSteps lead={<Markdown>{method.lead.join('\n')}</Markdown>} steps={method.steps} />
+              <MethodSteps lead={<Markdown>{method.lead.join('\n')}</Markdown>} items={method.items} />
             </section>
 
             {notes && (

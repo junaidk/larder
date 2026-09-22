@@ -6,26 +6,16 @@ import { useMemo, useState } from 'react'
 import type { EditorState } from '@/lib/view/build'
 import { buildMarkdown } from '@/lib/view/build'
 import type { Recipe, RecipeRef } from '@/lib/recipe/types'
-import { parseIngredientLine } from '@/lib/recipe/ingredient'
 import { saveRecipeAction } from '@/app/actions'
-
-const GROUP_RE = /^###\s+/
-
-/** The grey label below an ingredient box. */
-function hint(line: string): string {
-  const text = line.trim()
-  if (text === '') return ''
-  if (GROUP_RE.test(text)) return 'group heading'
-  const parsed = parseIngredientLine(`- ${text}`)
-  if (parsed.kind === 'text') return 'text only — will not scale'
-  const parts = [
-    parsed.quantity ? String(parsed.quantity.raw) : '',
-    parsed.unitRaw ?? '',
-    parsed.item ?? '',
-  ].filter(Boolean)
-  const tail = parsed.kind === 'counted' ? ' · counted, will not convert' : ''
-  return parts.join(' · ') + tail
-}
+import { EditorPreview } from '@/components/EditorPreview'
+import {
+  ingredientReadout,
+  isMethodHeading,
+  itemsToText,
+  linesToText,
+  textToItems,
+  textToLines,
+} from '@/lib/view/editor'
 
 export function RecipeEditor({
   initial, existing, recipe, groups, today,
@@ -42,36 +32,40 @@ export function RecipeEditor({
   const [group, setGroup] = useState(recipe?.group ?? groups[0] ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [pane, setPane] = useState<'form' | 'file'>('form')
+  const [pane, setPane] = useState<'form' | 'preview'>('form')
+  const [preview, setPreview] = useState<'recipe' | 'file'>('file')
+
+  // The two boxes keep their own text. Reading it back out of the arrays
+  // would fight the writer: a blank line typed at the end of the method box
+  // has no item to belong to yet, and would vanish under the cursor.
+  const [ingredientsText, setIngredientsText] = useState(() => linesToText(initial.ingredientLines))
+  const [methodBoxText, setMethodBoxText] = useState(() => itemsToText(initial.methodSteps))
 
   const markdown = useMemo(
     () => buildMarkdown(state, existing, today),
     [state, existing, today],
   )
 
+  const readout = useMemo(
+    () => ingredientReadout(state.ingredientLines),
+    [state.ingredientLines],
+  )
+
+  const ingredientCount = countLine(readout)
+  const methodCount = methodCountLine(state.methodSteps)
+
   function edit(changes: Partial<EditorState>) {
     setState((previous) => ({ ...previous, ...changes }))
   }
 
-  function editList(key: 'ingredientLines' | 'methodSteps', index: number, value: string) {
-    setState((previous) => {
-      const next = [...previous[key]]
-      next[index] = value
-      // Always keep one empty box at the end.
-      if (index === next.length - 1 && value.trim() !== '') next.push('')
-      return { ...previous, [key]: next }
-    })
+  function editIngredients(text: string) {
+    setIngredientsText(text)
+    edit({ ingredientLines: textToLines(text) })
   }
 
-  function addTo(key: 'ingredientLines' | 'methodSteps') {
-    setState((previous) => ({ ...previous, [key]: [...previous[key], ''] }))
-  }
-
-  function removeFrom(key: 'ingredientLines' | 'methodSteps', index: number) {
-    setState((previous) => {
-      const next = previous[key].filter((_, i) => i !== index)
-      return { ...previous, [key]: next.length > 0 ? next : [''] }
-    })
+  function editMethod(text: string) {
+    setMethodBoxText(text)
+    edit({ methodSteps: textToItems(text) })
   }
 
   async function save() {
@@ -101,7 +95,7 @@ export function RecipeEditor({
         <h1 className="text-xl font-semibold">{recipe ? 'Edit recipe' : 'New recipe'}</h1>
         <div className="flex items-center gap-3">
           <div className="flex rounded bg-raised p-1 lg:hidden">
-            {(['form', 'file'] as const).map((value) => (
+            {(['form', 'preview'] as const).map((value) => (
               <button
                 key={value}
                 type="button"
@@ -109,7 +103,7 @@ export function RecipeEditor({
                 aria-pressed={pane === value}
                 className={`rounded px-3 py-1 text-sm ${pane === value ? 'bg-surface shadow' : ''}`}
               >
-                {value === 'form' ? 'Form' : 'File'}
+                {value === 'form' ? 'Form' : 'Preview'}
               </button>
             ))}
           </div>
@@ -182,63 +176,66 @@ export function RecipeEditor({
           </label>
 
           <fieldset>
-            <legend className="text-sm font-medium">Ingredients</legend>
-            <p className="mb-2 text-xs text-ink-muted">
+            <div className="flex items-baseline justify-between">
+              <legend className="text-sm font-medium">Ingredients</legend>
+              <span className="text-xs text-ink-muted tabular-nums">{ingredientCount}</span>
+            </div>
+            <p className="mt-1 mb-2 text-xs text-ink-muted">
               Write one ingredient on each line, as you would say it. Start a line
               with <code>### </code> to begin a group.
             </p>
-            <ul className="space-y-2">
-              {state.ingredientLines.map((line, i) => (
-                <li key={i}>
-                  <div className="flex gap-2">
-                    <input
-                      value={line}
-                      onChange={(e) => editList('ingredientLines', i, e.target.value)}
-                      placeholder="500 g strong white flour"
-                      aria-label={`Ingredient ${i + 1}`}
-                      className="flex-1 rounded border border-line-strong bg-surface px-3 py-2"
-                    />
-                    <button type="button" onClick={() => removeFrom('ingredientLines', i)} aria-label={`Remove ingredient ${i + 1}`} className="px-2 text-ink-faint hover:text-ink-soft">×</button>
-                  </div>
-                  <p className="mt-0.5 h-4 pl-1 text-xs leading-4 text-ink-muted">
-                    {hint(line) || '\u00a0'}
-                  </p>
-                </li>
-              ))}
-            </ul>
-            <button
-              type="button"
-              onClick={() => addTo('ingredientLines')}
-              className="mt-2 rounded border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink-soft hover:border-line-hover"
-            >
-              + Add ingredient
-            </button>
+            <textarea
+              value={ingredientsText}
+              onChange={(e) => editIngredients(e.target.value)}
+              rows={10}
+              spellCheck={false}
+              aria-label="Ingredients"
+              placeholder="500 g strong white flour"
+              className={`${field} leading-7`}
+            />
+
+            {readout.attention.length > 0 && (
+              <div className="mt-2 rounded-r border border-line border-l-2 border-l-accent bg-surface px-4 py-3">
+                <p className="mb-2 font-sans text-xs font-medium tracking-wide text-ink-faint uppercase">
+                  Kept exactly as written — these will not scale
+                </p>
+                <ul>
+                  {readout.attention.map((problem) => (
+                    <li key={problem.line} className="flex items-baseline gap-3 py-0.5">
+                      <span className="w-6 shrink-0 text-right text-xs text-ink-dim tabular-nums">
+                        {problem.line}
+                      </span>
+                      <span className="text-sm text-ink">{problem.text}</span>
+                      <span className="text-xs text-ink-muted">{problem.why}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {readout.total > 0 && readout.attention.length === 0 && (
+              <p className="mt-2 text-xs text-ink-muted">Every line will scale and convert.</p>
+            )}
           </fieldset>
 
           <fieldset>
-            <legend className="text-sm font-medium">Method</legend>
-            <ol className="mt-2 space-y-2">
-              {state.methodSteps.map((step, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="w-5 pt-2 text-right text-sm text-ink-faint">{i + 1}</span>
-                  <textarea
-                    value={step}
-                    onChange={(e) => editList('methodSteps', i, e.target.value)}
-                    rows={2}
-                    aria-label={`Step ${i + 1}`}
-                    className="flex-1 rounded border border-line-strong bg-surface px-3 py-2"
-                  />
-                  <button type="button" onClick={() => removeFrom('methodSteps', i)} aria-label={`Remove step ${i + 1}`} className="px-2 text-ink-faint hover:text-ink-soft">×</button>
-                </li>
-              ))}
-            </ol>
-            <button
-              type="button"
-              onClick={() => addTo('methodSteps')}
-              className="mt-2 rounded border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink-soft hover:border-line-hover"
-            >
-              + Add step
-            </button>
+            <div className="flex items-baseline justify-between">
+              <legend className="text-sm font-medium">Method</legend>
+              <span className="text-xs text-ink-muted tabular-nums">{methodCount}</span>
+            </div>
+            <p className="mt-1 mb-2 text-xs text-ink-muted">
+              A blank line starts the next step, so one step can hold several
+              lines. Start a line with <code>### </code> to begin a section. The
+              numbers start again at 1 in each section.
+            </p>
+            <textarea
+              value={methodBoxText}
+              onChange={(e) => editMethod(e.target.value)}
+              rows={14}
+              spellCheck={false}
+              aria-label="Method"
+              placeholder={'Mix and knead until smooth.\n\nProve for an hour.'}
+              className={`${field} leading-7`}
+            />
           </fieldset>
 
           <label className="block text-sm">Notes
@@ -246,17 +243,66 @@ export function RecipeEditor({
           </label>
         </section>
 
-        <section className={`${pane === 'file' ? '' : 'hidden'} lg:block`}>
+        <section className={`${pane === 'preview' ? '' : 'hidden'} lg:block`}>
           <div className="sticky top-4">
-            <p className="mb-2 text-xs text-ink-muted">
-              {recipe ? `recipes/${group.trim() || recipe.group}/${recipe.slug}.md` : 'the new file'} — this is the exact text that the app writes
-            </p>
-            <pre className="max-h-[70vh] overflow-auto rounded border border-line bg-surface p-4 text-xs leading-relaxed">
-              {markdown}
-            </pre>
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex rounded bg-raised p-1">
+                {(['recipe', 'file'] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPreview(value)}
+                    aria-pressed={preview === value}
+                    className={`rounded px-3 py-1 text-sm ${
+                      preview === value ? 'bg-surface shadow' : 'text-ink-soft'
+                    }`}
+                  >
+                    {value === 'recipe' ? 'Recipe' : 'File'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-ink-muted">
+                {preview === 'recipe'
+                  ? 'how the recipe will read'
+                  : `${recipe ? `recipes/${group.trim() || recipe.group}/${recipe.slug}.md` : 'the new file'} — the exact text the app writes`}
+              </p>
+            </div>
+
+            {preview === 'recipe' ? (
+              <div className="max-h-[70vh] overflow-auto rounded border border-line bg-surface p-5">
+                <EditorPreview
+                  title={state.title}
+                  ingredientLines={state.ingredientLines}
+                  methodItems={state.methodSteps}
+                  notes={state.notes}
+                />
+              </div>
+            ) : (
+              <pre className="max-h-[70vh] overflow-auto rounded border border-line bg-surface p-4 text-xs leading-relaxed">
+                {markdown}
+              </pre>
+            )}
           </div>
         </section>
       </div>
     </div>
   )
+}
+
+/** A quiet line telling the writer that the box was understood. */
+function countLine(readout: ReturnType<typeof ingredientReadout>): string {
+  if (readout.total === 0) return ''
+  const parts = [`${readout.total} ingredients`, `${readout.measured} scale and convert`]
+  if (readout.counted > 0) parts.push(`${readout.counted} scale only`)
+  if (readout.textOnly > 0) parts.push(`${readout.textOnly} as written`)
+  return parts.join(' · ')
+}
+
+function methodCountLine(items: string[]): string {
+  const steps = items.filter((i) => i.trim() !== '' && !isMethodHeading(i)).length
+  const sections = items.filter((i) => isMethodHeading(i)).length
+  if (steps === 0 && sections === 0) return ''
+  const parts = [`${steps} ${steps === 1 ? 'step' : 'steps'}`]
+  if (sections > 0) parts.push(`${sections} ${sections === 1 ? 'section' : 'sections'}`)
+  return parts.join(' · ')
 }

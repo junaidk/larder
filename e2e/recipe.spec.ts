@@ -16,13 +16,26 @@ test('create a recipe, then add a cook log entry', async ({ page }) => {
   await page.getByLabel('Title').fill('Test Loaf')
   await page.getByLabel('Group').fill('breads')
   await page.getByLabel('Serves').fill('4')
-  await page.getByLabel('Ingredient 1', { exact: true }).fill('500 g strong white flour')
-  await page.getByLabel('Ingredient 2', { exact: true }).fill('a good pinch of sea salt')
-  await page.getByLabel('Step 1', { exact: true }).fill('Mix and bake at 220C.')
+  await page
+    .getByLabel('Ingredients')
+    .fill('500 g strong white flour\na good pinch of sea salt')
+  await page.getByLabel('Method').fill('Mix and bake at 220C.')
 
-  // The preview shows the exact file.
+  // The preview opens on the file, and shows the exact text.
   await expect(page.locator('pre')).toContainText('- 500 g strong white flour')
-  await expect(page.getByText('text only — will not scale')).toBeVisible()
+
+  // The readout names the line that will not scale, and only that line.
+  await expect(page.getByText('2 ingredients · 1 scale and convert · 1 as written')).toBeVisible()
+  await expect(page.getByText('Kept exactly as written')).toBeVisible()
+  await expect(page.getByText('text only', { exact: true })).toBeVisible()
+
+  // The other preview shows the recipe as it will read.
+  await page.getByRole('button', { name: 'Recipe', exact: true }).click()
+  // The textarea holds the same words, so look inside the preview only.
+  await expect(
+    page.locator('section').getByText('strong white flour').last(),
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'File', exact: true }).click()
 
   await page.getByRole('button', { name: 'Save recipe' }).click()
   await expect(page).toHaveURL(/\/r\/breads\/test-loaf$/)
@@ -153,4 +166,46 @@ test('the theme opens dark, switches, and holds the choice', async ({ page }) =>
 
   await page.goto('/')
   await expect(html).toHaveAttribute('data-theme', 'dark')
+})
+
+test('a method section heading survives a round trip through the editor', async ({ page }) => {
+  await page.goto('/new')
+  await page.getByLabel('Title').fill('Sectioned')
+  await page.getByLabel('Group').fill('breads')
+  await page.getByLabel('Ingredients').fill('500 g flour')
+  await page
+    .getByLabel('Method')
+    .fill('### Dough\n\nMix it.\nThen wait.\n\nRest it.\n\n### Bake\n\nHeat the oven.\n\nBake it.')
+
+  // A step of two lines is one step, not two.
+  await expect(page.getByText('4 steps · 2 sections')).toBeVisible()
+
+  // The numbers start again at 1 below each heading, in the file itself.
+  await expect(page.locator('pre')).toContainText(
+    '### Dough\n\n1. Mix it.\nThen wait.\n2. Rest it.\n\n### Bake\n\n1. Heat the oven.\n2. Bake it.',
+  )
+
+  await page.getByRole('button', { name: 'Save recipe' }).click()
+  await expect(page).toHaveURL(/\/r\/breads\/sectioned$/)
+
+  // The recipe page shows both sections, each counting from 1.
+  await expect(page.getByRole('heading', { name: 'Dough' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bake' })).toBeVisible()
+  const numerals = await page.locator('ol li button span:first-child').allInnerTexts()
+  expect(numerals).toEqual(['1', '2', '1', '2'])
+
+  // Open the editor again: the headings come back as written, and saving
+  // with no change leaves the file byte for byte the same.
+  const file = join(DIR, 'breads', 'sectioned.md')
+  const before = readFileSync(file, 'utf8')
+  await page.goto('/r/breads/sectioned/edit')
+  await expect(page.getByLabel('Method')).toHaveValue(
+    '### Dough\n\nMix it.\nThen wait.\n\nRest it.\n\n### Bake\n\nHeat the oven.\n\nBake it.',
+  )
+  await page.getByRole('button', { name: 'Save recipe' }).click()
+  await expect(page).toHaveURL(/\/r\/breads\/sectioned$/)
+
+  const after = readFileSync(file, 'utf8')
+  const body = (t: string) => t.slice(t.indexOf('# Sectioned'))
+  expect(body(after)).toBe(body(before))
 })
