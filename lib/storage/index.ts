@@ -8,6 +8,9 @@ import { allIngredients, cookLog } from '@/lib/recipe/access'
 
 const SAFE_NAME = /^[a-z0-9-]+$/
 
+/** Where a deleted recipe goes. The name fails SAFE_NAME, so the index skips it. */
+const TRASH = '.trash'
+
 export function recipesDir(): string {
   return process.env.RECIPES_DIR || join(process.cwd(), 'recipes')
 }
@@ -211,6 +214,38 @@ export async function moveRecipe(from: RecipeRef, to: RecipeRef): Promise<void> 
   }
 
   await unlink(fromPath)
+}
+
+/**
+ * Move a recipe into the trash.
+ *
+ * `.trash` does not match the safe name rule, so `listGroups` passes over it
+ * and the recipe leaves the index. Obsidian uses the same folder name, so a
+ * vault open on this directory agrees with the app about what is deleted.
+ *
+ * The function links the new path before it unlinks the old one, so the
+ * content exists at one path or at both, never at neither. A name the trash
+ * already holds gets a number, because a user can make a recipe again and
+ * delete it again.
+ */
+export async function trashRecipe(ref: RecipeRef): Promise<void> {
+  const fromPath = pathFor(ref)
+  const trashDir = join(recipesDir(), TRASH, ref.group)
+  await mkdir(trashDir, { recursive: true })
+
+  for (let n = 1; n <= 99; n += 1) {
+    const name = n === 1 ? `${ref.slug}.md` : `${ref.slug}-${n}.md`
+    try {
+      await link(fromPath, join(trashDir, name))
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') continue
+      throw error
+    }
+    await unlink(fromPath)
+    return
+  }
+
+  throw new Error(`The trash already holds 99 copies of ${ref.slug}`)
 }
 
 export async function addLogEntry(ref: RecipeRef, entry: CookLogEntry): Promise<void> {

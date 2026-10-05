@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import type { RecipeRef } from '@/lib/recipe/types'
 import {
   addLogEntry, createRecipe, deleteLogEntry, isSafeName, moveRecipe,
-  readRecipe, saveRecipe, slugify,
+  readRecipe, saveRecipe, slugify, trashRecipe,
 } from '@/lib/storage/index'
 import { parseRecipe } from '@/lib/recipe/parse'
 
@@ -67,6 +67,21 @@ export async function deleteLogEntryAction(ref: RecipeRef, index: number): Promi
 
   revalidatePath(urlFor(ref))
   revalidatePath('/')
+  return { ok: true }
+}
+
+/** Move a recipe to the trash. The index then passes over it. */
+export async function deleteRecipeAction(ref: RecipeRef): Promise<ActionResult> {
+  if (badRef(ref)) return { ok: false, error: 'That recipe name is not valid.' }
+
+  try {
+    await trashRecipe(ref)
+  } catch (error) {
+    return { ok: false, error: (error as Error).message }
+  }
+
+  revalidatePath('/')
+  revalidatePath(urlFor(ref))
   return { ok: true }
 }
 

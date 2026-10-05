@@ -207,6 +207,58 @@ describe('moveRecipe', () => {
   })
 })
 
+describe('trashRecipe', () => {
+  it('moves the file into .trash under its group', async () => {
+    seed('breads', 'focaccia', SIMPLE)
+    await (await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' })
+    expect(readFileSync(join(dir, '.trash', 'breads', 'focaccia.md'), 'utf8')).toBe(SIMPLE)
+    expect(readdirSync(join(dir, 'breads'))).toEqual([])
+  })
+
+  it('takes the recipe out of the index', async () => {
+    seed('breads', 'focaccia', SIMPLE)
+    seed('breads', 'milk-bread', SIMPLE)
+    await (await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' })
+    const { recipes } = await (await mod()).listRecipes()
+    expect(recipes.map((r) => r.slug)).toEqual(['milk-bread'])
+  })
+
+  it('never shows .trash as a group', async () => {
+    seed('breads', 'focaccia', SIMPLE)
+    await (await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' })
+    // The group the recipe left stays, so the editor can still offer it.
+    expect(await (await mod()).listGroups()).toEqual(['breads'])
+  })
+
+  it('adds a number when the trash already holds that name', async () => {
+    seed('breads', 'focaccia', 'FIRST')
+    await (await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' })
+    seed('breads', 'focaccia', 'SECOND')
+    await (await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' })
+
+    expect(readFileSync(join(dir, '.trash', 'breads', 'focaccia.md'), 'utf8')).toBe('FIRST')
+    expect(readFileSync(join(dir, '.trash', 'breads', 'focaccia-2.md'), 'utf8')).toBe('SECOND')
+  })
+
+  it('rejects an unsafe group', async () => {
+    await expect((await mod()).trashRecipe({ group: '../etc', slug: 'focaccia' }))
+      .rejects.toThrow(/group/i)
+  })
+
+  it('rejects an unsafe slug', async () => {
+    await expect((await mod()).trashRecipe({ group: 'breads', slug: '../passwd' }))
+      .rejects.toThrow(/slug/i)
+  })
+
+  it('keeps the file when the link fails', async () => {
+    seed('breads', 'focaccia', SIMPLE)
+    vi.mocked(link).mockRejectedValueOnce(new Error('disk is full'))
+    await expect((await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' }))
+      .rejects.toThrow(/disk is full/)
+    expect(readFileSync(join(dir, 'breads', 'focaccia.md'), 'utf8')).toBe(SIMPLE)
+  })
+})
+
 describe('listRecipes', () => {
   it('summarises every recipe and records its group', async () => {
     seed('breads', 'focaccia', [
