@@ -52,6 +52,17 @@ So a recipe that does not appear has a name to fix. Rename the folder or the
 file to lowercase letters, numbers and hyphens, and it appears on the next
 page load. The app never renames anything on its own.
 
+### Deleting a recipe
+
+The Delete control on a recipe page asks once, then moves the file to
+`recipes/.trash/<group>/<slug>.md`. The app does not erase the file. `.trash`
+breaks the name rule above, so the index passes over it. Obsidian uses the
+same folder, so a vault open on this directory agrees about what is deleted.
+
+To get a recipe back, move its file out of `.trash` into its group folder.
+To erase it, delete the file in `.trash` yourself. A name the trash already
+holds gets a number, such as `focaccia-2.md`.
+
 To use another folder, set `RECIPES_DIR`:
 
 ```bash

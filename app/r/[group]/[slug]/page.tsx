@@ -6,6 +6,7 @@ import { displayIngredient, displayIngredientParts } from '@/lib/view/display'
 import { convertMethodText } from '@/lib/units/convert'
 import { splitMethodText } from '@/lib/view/method'
 import { readViewParams } from '@/lib/view/params'
+import { DeleteRecipe } from '@/components/DeleteRecipe'
 import { RecipeLayout } from '@/components/RecipeLayout'
 import { CookLogForm } from '@/components/CookLogForm'
 import { DeleteLogEntry } from '@/components/DeleteLogEntry'
@@ -56,7 +57,10 @@ export default async function RecipePage({ params, searchParams }: Props) {
     <main className="mx-auto max-w-5xl p-6 sm:p-8">
       <nav className="no-print mb-8 flex items-center justify-between font-sans text-sm">
         <Link href="/" className="text-ink-muted hover:underline">All recipes</Link>
-        <Link href={`/r/${group}/${slug}/edit`} className="text-ink-muted hover:underline">Edit</Link>
+        <span className="flex items-center gap-4">
+          <Link href={`/r/${group}/${slug}/edit`} className="text-ink-muted hover:underline">Edit</Link>
+          <DeleteRecipe recipe={{ group, slug }} />
+        </span>
       </nav>
 
       <header className="max-w-2xl">

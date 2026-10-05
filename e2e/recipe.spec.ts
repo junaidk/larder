@@ -209,3 +209,24 @@ test('a method section heading survives a round trip through the editor', async 
   const body = (t: string) => t.slice(t.indexOf('# Sectioned'))
   expect(body(after)).toBe(body(before))
 })
+
+test('deleting a recipe moves it to the trash and takes it off the index', async ({ page }) => {
+  const file = join(DIR, 'breads', 'sectioned.md')
+  const before = readFileSync(file, 'utf8')
+
+  await page.goto('/r/breads/sectioned')
+  await page.getByRole('button', { name: 'Delete', exact: true }).click()
+
+  // The first click only asks. The file is still where it was.
+  expect(existsSync(file)).toBe(true)
+
+  await page.getByRole('button', { name: 'Really delete?' }).click()
+  await expect(page).toHaveURL(/127\.0\.0\.1:3100\/$/)
+
+  // The file sits in the trash now, with the same content.
+  expect(existsSync(file)).toBe(false)
+  expect(readFileSync(join(DIR, '.trash', 'breads', 'sectioned.md'), 'utf8')).toBe(before)
+
+  // The index does not list it.
+  await expect(page.getByRole('link', { name: 'Sectioned' })).toHaveCount(0)
+})
