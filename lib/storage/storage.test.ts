@@ -207,6 +207,58 @@ describe('moveRecipe', () => {
   })
 })
 
+describe('trashRecipe', () => {
+  it('moves the file into .trash under its group', async () => {
+    seed('breads', 'focaccia', SIMPLE)
+    await (await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' })
+    expect(readFileSync(join(dir, '.trash', 'breads', 'focaccia.md'), 'utf8')).toBe(SIMPLE)
+    expect(readdirSync(join(dir, 'breads'))).toEqual([])
+  })
+
+  it('takes the recipe out of the index', async () => {
+    seed('breads', 'focaccia', SIMPLE)
+    seed('breads', 'milk-bread', SIMPLE)
+    await (await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' })
+    const { recipes } = await (await mod()).listRecipes()
+    expect(recipes.map((r) => r.slug)).toEqual(['milk-bread'])
+  })
+
+  it('never shows .trash as a group', async () => {
+    seed('breads', 'focaccia', SIMPLE)
+    await (await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' })
+    // The group the recipe left stays, so the editor can still offer it.
+    expect(await (await mod()).listGroups()).toEqual(['breads'])
+  })
+
+  it('adds a number when the trash already holds that name', async () => {
+    seed('breads', 'focaccia', 'FIRST')
+    await (await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' })
+    seed('breads', 'focaccia', 'SECOND')
+    await (await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' })
+
+    expect(readFileSync(join(dir, '.trash', 'breads', 'focaccia.md'), 'utf8')).toBe('FIRST')
+    expect(readFileSync(join(dir, '.trash', 'breads', 'focaccia-2.md'), 'utf8')).toBe('SECOND')
+  })
+
+  it('rejects an unsafe group', async () => {
+    await expect((await mod()).trashRecipe({ group: '../etc', slug: 'focaccia' }))
+      .rejects.toThrow(/group/i)
+  })
+
+  it('rejects an unsafe slug', async () => {
+    await expect((await mod()).trashRecipe({ group: 'breads', slug: '../passwd' }))
+      .rejects.toThrow(/slug/i)
+  })
+
+  it('keeps the file when the link fails', async () => {
+    seed('breads', 'focaccia', SIMPLE)
+    vi.mocked(link).mockRejectedValueOnce(new Error('disk is full'))
+    await expect((await mod()).trashRecipe({ group: 'breads', slug: 'focaccia' }))
+      .rejects.toThrow(/disk is full/)
+    expect(readFileSync(join(dir, 'breads', 'focaccia.md'), 'utf8')).toBe(SIMPLE)
+  })
+})
+
 describe('listRecipes', () => {
   it('summarises every recipe and records its group', async () => {
     seed('breads', 'focaccia', [
@@ -321,6 +373,77 @@ describe('deleteLogEntry', () => {
     await expect((await mod()).deleteLogEntry({ group: 'breads', slug: 'focaccia' }, 9))
       .rejects.toThrow(/entry/i)
     expect(readFileSync(join(dir, 'breads', 'focaccia.md'), 'utf8')).toBe(base)
+  })
+})
+
+describe('updateLogEntry', () => {
+  const base = ['---', 'title: Focaccia', '---', '', '# Focaccia', '',
+    '## Cook Log', '',
+    '### 2026-09-14 — ★★★★☆', '', 'Too salty.', '',
+    '### 2026-08-02 — ★★★☆☆', '', 'First attempt.', ''].join('\n')
+
+  const ref = { group: 'breads', slug: 'focaccia' }
+
+  it('rewrites the entry at the position', async () => {
+    seed('breads', 'focaccia', base)
+    await (await mod()).updateLogEntry(ref, 0, {
+      date: '2026-09-15', rating: 2, note: 'Still salty.',
+    })
+    const out = readFileSync(join(dir, 'breads', 'focaccia.md'), 'utf8')
+    expect(out).toContain('### 2026-09-15 — ★★☆☆☆\n\nStill salty.')
+    expect(out).not.toContain('Too salty.')
+  })
+
+  it('leaves every other entry exactly as it was', async () => {
+    seed('breads', 'focaccia', base)
+    await (await mod()).updateLogEntry(ref, 0, {
+      date: '2026-09-14', rating: 4, note: 'Edited.',
+    })
+    const out = readFileSync(join(dir, 'breads', 'focaccia.md'), 'utf8')
+    expect(out).toContain('### 2026-08-02 — ★★★☆☆\n\nFirst attempt.')
+    expect(out).toContain('# Focaccia')
+  })
+
+  it('edits the older entry when the index says so', async () => {
+    seed('breads', 'focaccia', base)
+    await (await mod()).updateLogEntry(ref, 1, {
+      date: '2026-08-02', rating: 1, note: 'Worse than I remembered.',
+    })
+    const out = readFileSync(join(dir, 'breads', 'focaccia.md'), 'utf8')
+    expect(out).toContain('### 2026-09-14 — ★★★★☆\n\nToo salty.')
+    expect(out).toContain('### 2026-08-02 — ★☆☆☆☆\n\nWorse than I remembered.')
+  })
+
+  it('writes a heading alone when the note is empty', async () => {
+    seed('breads', 'focaccia', base)
+    await (await mod()).updateLogEntry(ref, 0, { date: '2026-09-14', rating: 5, note: '' })
+    const out = readFileSync(join(dir, 'breads', 'focaccia.md'), 'utf8')
+    expect(out).toContain('### 2026-09-14 — ★★★★★\n\n### 2026-08-02')
+  })
+
+  it('keeps the entry readable again after the edit', async () => {
+    seed('breads', 'focaccia', base)
+    await (await mod()).updateLogEntry(ref, 0, { date: '2026-09-15', rating: 2, note: 'Two lines.\nSecond.' })
+    const recipe = (await (await mod()).readRecipe(ref))!
+    const { cookLog } = await import('@/lib/recipe/access')
+    expect(cookLog(recipe)).toHaveLength(2)
+    expect(cookLog(recipe)[0]).toMatchObject({
+      date: '2026-09-15', rating: 2, note: 'Two lines.\nSecond.',
+    })
+    expect(cookLog(recipe)[1]).toMatchObject({ date: '2026-08-02', rating: 3 })
+  })
+
+  it('rejects an index that is out of range', async () => {
+    seed('breads', 'focaccia', base)
+    await expect((await mod()).updateLogEntry(ref, 9, { date: '2026-09-14', rating: 1, note: 'x' }))
+      .rejects.toThrow(/entry/i)
+    expect(readFileSync(join(dir, 'breads', 'focaccia.md'), 'utf8')).toBe(base)
+  })
+
+  it('rejects a recipe that has no cook log', async () => {
+    seed('breads', 'focaccia', SIMPLE)
+    await expect((await mod()).updateLogEntry(ref, 0, { date: '2026-09-14', rating: 1, note: 'x' }))
+      .rejects.toThrow(/entry/i)
   })
 })
 

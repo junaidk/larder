@@ -192,7 +192,9 @@ export function RecipeIndex({ recipes }: { recipes: RecipeSummary[] }) {
                     href={`/r/${r.group}/${r.slug}`}
                     className="flex flex-col gap-2 rounded-lg border border-line bg-surface px-4 py-3 hover:border-line-hover sm:flex-row sm:items-center sm:gap-4"
                   >
-                    <h3 className="font-medium sm:w-64 sm:shrink-0">{r.title}</h3>
+                    <h3 className="font-medium sm:w-80 sm:shrink-0 sm:truncate" title={r.title}>
+                      {r.title}
+                    </h3>
                     <p className="flex flex-1 flex-wrap gap-1">
                       {r.tags.map((t) => (
                         <span key={t} className="rounded bg-raised px-2 py-0.5 text-xs text-ink-soft">

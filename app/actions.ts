@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import type { RecipeRef } from '@/lib/recipe/types'
 import {
   addLogEntry, createRecipe, deleteLogEntry, isSafeName, moveRecipe,
-  readRecipe, saveRecipe, slugify,
+  readRecipe, saveRecipe, slugify, trashRecipe, updateLogEntry,
 } from '@/lib/storage/index'
 import { parseRecipe } from '@/lib/recipe/parse'
 
@@ -22,14 +22,25 @@ function urlFor(ref: RecipeRef): string {
   return `/r/${ref.group}/${ref.slug}`
 }
 
-export async function addLogEntryAction(ref: RecipeRef, form: FormData): Promise<ActionResult> {
-  if (badRef(ref)) return { ok: false, error: 'That recipe name is not valid.' }
+/** What the cook log form sends. The server checks every field again. */
+export type LogEntryInput = { date: string; rating: number | null; note: string }
 
-  const date = String(form.get('date') ?? '').trim()
+type Checked = { ok: true; entry: LogEntryInput } | { ok: false; error: string }
+
+function checkEntry(input: LogEntryInput): Checked {
+  const date = String(input.date ?? '').trim()
   if (!DATE_RE.test(date)) return { ok: false, error: 'Give a date in the form YYYY-MM-DD.' }
 
-  const note = String(form.get('note') ?? '').trim()
-  if (!note) return { ok: false, error: 'Write a note before you save.' }
+  const rating = input.rating
+  if (rating === null || rating === undefined || String(rating) === '') {
+    return { ok: false, error: 'Give a rating before you save.' }
+  }
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return { ok: false, error: 'A rating is a whole number from 1 to 5.' }
+  }
+
+  // A note is optional. A rating on its own is a complete entry.
+  const note = String(input.note ?? '').trim()
   // A line that starts with # reads as a heading. Such a line splits the
   // cook log on the next parse, so the page then shows fewer entries.
   if (note.split(/\r?\n/).some((line) => line.startsWith('#'))) {
@@ -39,14 +50,42 @@ export async function addLogEntryAction(ref: RecipeRef, form: FormData): Promise
     }
   }
 
-  const ratingRaw = String(form.get('rating') ?? '').trim()
-  const rating = ratingRaw ? Number(ratingRaw) : null
-  if (rating !== null && (!Number.isInteger(rating) || rating < 1 || rating > 5)) {
-    return { ok: false, error: 'A rating is a whole number from 1 to 5.' }
-  }
+  return { ok: true, entry: { date, rating, note } }
+}
+
+export async function addLogEntryAction(
+  ref: RecipeRef,
+  input: LogEntryInput,
+): Promise<ActionResult> {
+  if (badRef(ref)) return { ok: false, error: 'That recipe name is not valid.' }
+
+  const checked = checkEntry(input)
+  if (!checked.ok) return checked
 
   try {
-    await addLogEntry(ref, { date, rating, note })
+    await addLogEntry(ref, checked.entry)
+  } catch (error) {
+    return { ok: false, error: (error as Error).message }
+  }
+
+  revalidatePath(urlFor(ref))
+  revalidatePath('/')
+  return { ok: true }
+}
+
+/** Rewrite one cook log entry. `index` counts from the newest. */
+export async function updateLogEntryAction(
+  ref: RecipeRef,
+  index: number,
+  input: LogEntryInput,
+): Promise<ActionResult> {
+  if (badRef(ref)) return { ok: false, error: 'That recipe name is not valid.' }
+
+  const checked = checkEntry(input)
+  if (!checked.ok) return checked
+
+  try {
+    await updateLogEntry(ref, index, checked.entry)
   } catch (error) {
     return { ok: false, error: (error as Error).message }
   }
@@ -67,6 +106,21 @@ export async function deleteLogEntryAction(ref: RecipeRef, index: number): Promi
 
   revalidatePath(urlFor(ref))
   revalidatePath('/')
+  return { ok: true }
+}
+
+/** Move a recipe to the trash. The index then passes over it. */
+export async function deleteRecipeAction(ref: RecipeRef): Promise<ActionResult> {
+  if (badRef(ref)) return { ok: false, error: 'That recipe name is not valid.' }
+
+  try {
+    await trashRecipe(ref)
+  } catch (error) {
+    return { ok: false, error: (error as Error).message }
+  }
+
+  revalidatePath('/')
+  revalidatePath(urlFor(ref))
   return { ok: true }
 }
 

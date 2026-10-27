@@ -14,7 +14,7 @@ test('create a recipe, then add a cook log entry', async ({ page }) => {
   // 1. Create a recipe in the editor and save it.
   await page.goto('/new')
   await page.getByLabel('Title').fill('Test Loaf')
-  await page.getByLabel('Group').fill('breads')
+  await page.getByLabel('New group').fill('breads')
   await page.getByLabel('Serves').fill('4')
   await page
     .getByLabel('Ingredients')
@@ -63,7 +63,9 @@ test('create a recipe, then add a cook log entry', async ({ page }) => {
   await page.getByLabel('Note').fill('Too salty. Next time 1 tsp.')
   await page.getByRole('button', { name: 'Save entry' }).click()
 
-  // 4. The app adds the entry at the top of the cook log.
+  // 4. The app adds the entry at the top of the cook log. The form closes
+  // only after the save returns, so wait for that before reading the file.
+  await expect(page.getByRole('button', { name: 'I cooked this' })).toBeVisible()
   await expect(page.getByText('Too salty. Next time 1 tsp.')).toBeVisible()
   const after = readFileSync(FILE, 'utf8')
   expect(after).toContain('## Cook Log\n\n### 2026-09-20 — ★★★★☆')
@@ -75,8 +77,10 @@ test('create a recipe, then add a cook log entry', async ({ page }) => {
   // 6. A second entry, then delete the newest one.
   await page.getByRole('button', { name: 'I cooked this' }).click()
   await page.getByLabel('Date').fill('2026-09-21')
+  await page.getByRole('button', { name: '3 stars' }).click()
   await page.getByLabel('Note').fill('Better with less salt.')
   await page.getByRole('button', { name: 'Save entry' }).click()
+  await expect(page.getByRole('button', { name: 'I cooked this' })).toBeVisible()
   await expect(page.getByText('Better with less salt.')).toBeVisible()
 
   await page.getByRole('button', { name: 'Delete the entry for 2026-09-21' }).click()
@@ -125,7 +129,8 @@ test('changing the group moves the file and the URL', async ({ page }) => {
   const before = readFileSync(FILE, 'utf8')
 
   await page.goto('/r/breads/test-loaf/edit')
-  await page.getByLabel('Group').fill('mains')
+  await page.getByLabel('Group', { exact: true }).selectOption('__new__')
+  await page.getByLabel('New group').fill('mains')
   await page.getByRole('button', { name: 'Save recipe' }).click()
 
   await expect(page).toHaveURL(/\/r\/mains\/test-loaf$/)
@@ -171,7 +176,7 @@ test('the theme opens dark, switches, and holds the choice', async ({ page }) =>
 test('a method section heading survives a round trip through the editor', async ({ page }) => {
   await page.goto('/new')
   await page.getByLabel('Title').fill('Sectioned')
-  await page.getByLabel('Group').fill('breads')
+  await page.getByLabel('Group', { exact: true }).selectOption('breads')
   await page.getByLabel('Ingredients').fill('500 g flour')
   await page
     .getByLabel('Method')
@@ -208,4 +213,85 @@ test('a method section heading survives a round trip through the editor', async 
   const after = readFileSync(file, 'utf8')
   const body = (t: string) => t.slice(t.indexOf('# Sectioned'))
   expect(body(after)).toBe(body(before))
+})
+
+test('deleting a recipe moves it to the trash and takes it off the index', async ({ page }) => {
+  const file = join(DIR, 'breads', 'sectioned.md')
+  const before = readFileSync(file, 'utf8')
+
+  await page.goto('/r/breads/sectioned')
+  await page.getByRole('button', { name: 'Delete', exact: true }).click()
+
+  // The first click only asks. The file is still where it was.
+  expect(existsSync(file)).toBe(true)
+
+  await page.getByRole('button', { name: 'Really delete?' }).click()
+  await expect(page).toHaveURL(/127\.0\.0\.1:3100\/$/)
+
+  // The file sits in the trash now, with the same content.
+  expect(existsSync(file)).toBe(false)
+  expect(readFileSync(join(DIR, '.trash', 'breads', 'sectioned.md'), 'utf8')).toBe(before)
+
+  // The index does not list it.
+  await expect(page.getByRole('link', { name: 'Sectioned' })).toHaveCount(0)
+})
+
+test('an entry needs a rating, and saves with no note', async ({ page }) => {
+  const file = join(DIR, 'mains', 'test-loaf.md')
+  await page.goto('/r/mains/test-loaf')
+
+  await page.getByRole('button', { name: 'I cooked this' }).click()
+  await page.getByLabel('Date').fill('2026-10-01')
+  await page.getByRole('button', { name: 'Save entry' }).click()
+
+  // No rating, so nothing reaches the file.
+  await expect(page.getByText('Give a rating before you save.')).toBeVisible()
+  expect(readFileSync(file, 'utf8')).not.toContain('### 2026-10-01')
+
+  // A rating on its own is enough.
+  await page.getByRole('button', { name: '3 stars' }).click()
+  await page.getByRole('button', { name: 'Save entry' }).click()
+  await expect(page.getByRole('button', { name: 'I cooked this' })).toBeVisible()
+
+  const out = readFileSync(file, 'utf8')
+  // The heading stands alone: the next entry's heading follows it directly.
+  expect(out).toContain('### 2026-10-01 — ★★★☆☆\n\n### 2026-09-20')
+})
+
+test('editing an entry changes that entry only', async ({ page }) => {
+  const file = join(DIR, 'mains', 'test-loaf.md')
+  await page.goto('/r/mains/test-loaf')
+
+  await page.getByRole('button', { name: 'Edit the entry for 2026-10-01' }).click()
+  await page.getByLabel('Note').fill('Added a note later.')
+  await page.getByRole('button', { name: '5 stars' }).click()
+  await page.getByRole('button', { name: 'Save entry' }).click()
+
+  // The form closes only after the save returns. The note text alone is not
+  // a safe wait: the open textarea holds that same text.
+  await expect(page.getByRole('button', { name: 'Edit the entry for 2026-10-01' })).toBeVisible()
+  await expect(page.getByText('Added a note later.')).toBeVisible()
+
+  const out = readFileSync(file, 'utf8')
+  expect(out).toContain('### 2026-10-01 — ★★★★★\n\nAdded a note later.')
+  // The older entry keeps its own text.
+  expect(out).toContain('### 2026-09-20 — ★★★★☆\n\nToo salty. Next time 1 tsp.')
+})
+
+test('the group field is a dropdown that can also make a new group', async ({ page }) => {
+  await page.goto('/r/mains/test-loaf/edit')
+  await expect(page.getByLabel('Group', { exact: true })).toHaveValue('mains')
+
+  // Pick a group that already exists.
+  await page.getByLabel('Group', { exact: true }).selectOption('breads')
+  await page.getByRole('button', { name: 'Save recipe' }).click()
+  await expect(page).toHaveURL(/\/r\/breads\/test-loaf$/)
+
+  // Make a group that does not exist yet.
+  await page.goto('/r/breads/test-loaf/edit')
+  await page.getByLabel('Group', { exact: true }).selectOption('__new__')
+  await page.getByLabel('New group').fill('suppers')
+  await page.getByRole('button', { name: 'Save recipe' }).click()
+  await expect(page).toHaveURL(/\/r\/suppers\/test-loaf$/)
+  expect(existsSync(join(DIR, 'suppers', 'test-loaf.md'))).toBe(true)
 })
