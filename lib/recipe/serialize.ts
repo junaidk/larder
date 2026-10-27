@@ -10,7 +10,10 @@ export function formatStars(rating: number | null): string {
 export function formatLogEntry(entry: CookLogEntry): string {
   const stars = formatStars(entry.rating)
   const heading = stars ? `### ${entry.date} — ${stars}` : `### ${entry.date}`
-  return `${heading}\n\n${entry.note.trim()}`
+  const note = entry.note.trim()
+  // An empty note gets no body at all. A heading and a blank body would add
+  // an empty line that the parser then reads back as part of the entry.
+  return note ? `${heading}\n\n${note}` : heading
 }
 
 function blockLines(block: Block): string[] {

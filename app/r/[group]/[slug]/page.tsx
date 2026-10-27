@@ -9,10 +9,9 @@ import { readViewParams } from '@/lib/view/params'
 import { DeleteRecipe } from '@/components/DeleteRecipe'
 import { RecipeLayout } from '@/components/RecipeLayout'
 import { CookLogForm } from '@/components/CookLogForm'
-import { DeleteLogEntry } from '@/components/DeleteLogEntry'
+import { LogEntry } from '@/components/LogEntry'
 import { IngredientList } from '@/components/IngredientList'
 import { MethodSteps } from '@/components/MethodSteps'
-import { Stars } from '@/components/Stars'
 import { Markdown } from '@/components/Markdown'
 import { sourceLink } from '@/lib/view/source'
 
@@ -133,16 +132,13 @@ export default async function RecipePage({ params, searchParams }: Props) {
               <ol className="mt-4 space-y-4">
                 {log.map((entry, i) => (
                   <li key={`${entry.date}-${i}`} className="rounded-lg border border-line bg-surface p-4">
-                    <div className="flex items-center gap-3 font-sans text-sm">
-                      <time className="font-medium text-ink-soft">{entry.date}</time>
-                      <Stars rating={entry.rating} />
-                      <span className="ml-auto">
-                        <DeleteLogEntry recipe={ref} index={i} date={entry.date} />
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <Markdown>{entry.note}</Markdown>
-                    </div>
+                    <LogEntry
+                      recipe={ref}
+                      index={i}
+                      entry={{ date: entry.date, rating: entry.rating, note: entry.note }}
+                    >
+                      {entry.note ? <Markdown>{entry.note}</Markdown> : null}
+                    </LogEntry>
                   </li>
                 ))}
               </ol>

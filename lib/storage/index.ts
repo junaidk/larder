@@ -278,6 +278,37 @@ export async function addLogEntry(ref: RecipeRef, entry: CookLogEntry): Promise<
 }
 
 /**
+ * Rewrite one cook log entry. `index` counts from the newest entry, in the
+ * same order that `cookLog` returns.
+ *
+ * The function builds fresh lines for that entry only. Every other entry
+ * keeps its exact source lines, so an edit of one entry never rewrites the
+ * rest of the log.
+ */
+export async function updateLogEntry(
+  ref: RecipeRef,
+  index: number,
+  entry: CookLogEntry,
+): Promise<void> {
+  const recipe = await readRecipe(ref)
+  if (!recipe) throw new Error(`No recipe at ${ref.group}/${ref.slug}`)
+
+  const block = recipe.blocks.find((b) => b.kind === 'cooklog')
+  if (!block || block.kind !== 'cooklog') {
+    throw new Error(`No cook log entry at position ${index}`)
+  }
+  if (!Number.isInteger(index) || index < 0 || index >= block.entries.length) {
+    throw new Error(`No cook log entry at position ${index}`)
+  }
+
+  // The empty line at the end keeps this entry apart from the one below it.
+  const rawLines = [...formatLogEntry(entry).split('\n'), '']
+  block.entries = block.entries.map((old, i) => (i === index ? { ...entry, rawLines } : old))
+
+  await saveRecipe(ref, recipe)
+}
+
+/**
  * Remove one cook log entry. `index` counts from the newest entry, in the
  * same order that `cookLog` returns.
  */

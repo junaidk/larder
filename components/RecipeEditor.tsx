@@ -1,5 +1,8 @@
 'use client'
 
+/** The select value that asks for a group that does not exist yet. */
+const NEW_GROUP = '__new__'
+
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
@@ -29,7 +32,17 @@ export function RecipeEditor({
   const router = useRouter()
   const [state, setState] = useState<EditorState>(initial)
   const [tagText, setTagText] = useState(initial.tags.join(', '))
-  const [group, setGroup] = useState(recipe?.group ?? groups[0] ?? '')
+  // The select holds either an existing group or NEW_GROUP. A recipe whose
+  // own group is missing from the list still needs an option to sit on.
+  const groupOptions = useMemo(() => {
+    const all = new Set(groups)
+    if (recipe?.group) all.add(recipe.group)
+    return [...all].sort()
+  }, [groups, recipe?.group])
+
+  const [choice, setChoice] = useState(recipe?.group ?? groupOptions[0] ?? NEW_GROUP)
+  const [newGroup, setNewGroup] = useState('')
+  const group = choice === NEW_GROUP ? newGroup : choice
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [pane, setPane] = useState<'form' | 'preview'>('form')
@@ -132,19 +145,32 @@ export function RecipeEditor({
             <input value={state.title} onChange={(e) => edit({ title: e.target.value })} className={field} />
           </label>
 
-          <label className="block text-sm">Group
-            <input
-              value={group}
-              onChange={(e) => setGroup(e.target.value)}
-              list="recipe-groups"
-              placeholder="breads"
-              required
+          <div className="text-sm">
+            <label htmlFor="recipe-group" className="block">Group</label>
+            <select
+              id="recipe-group"
+              value={choice}
+              onChange={(e) => setChoice(e.target.value)}
               className={field}
-            />
-          </label>
-          <datalist id="recipe-groups">
-            {groups.map((g) => <option key={g} value={g} />)}
-          </datalist>
+            >
+              {groupOptions.map((g) => <option key={g} value={g}>{g}</option>)}
+              <option value={NEW_GROUP}>New group…</option>
+            </select>
+          </div>
+
+          {choice === NEW_GROUP && (
+            <div className="text-sm">
+              <label htmlFor="recipe-new-group" className="block">New group</label>
+              <input
+                id="recipe-new-group"
+                value={newGroup}
+                onChange={(e) => setNewGroup(e.target.value)}
+                placeholder="breads"
+                required
+                className={field}
+              />
+            </div>
+          )}
 
           <label className="block text-sm">Tags, separated by a comma
             <input

@@ -41,6 +41,16 @@ describe('formatLogEntry', () => {
     const text = formatLogEntry({ date: '2026-09-14', rating: null, note: 'Fine.' })
     expect(text).toBe('### 2026-09-14\n\nFine.')
   })
+
+  it('writes the heading alone when the note is empty', () => {
+    const text = formatLogEntry({ date: '2026-09-14', rating: 5, note: '' })
+    expect(text).toBe('### 2026-09-14 — ★★★★★')
+  })
+
+  it('writes the heading alone when the note holds only blank lines', () => {
+    const text = formatLogEntry({ date: '2026-09-14', rating: 5, note: '  \n\n ' })
+    expect(text).toBe('### 2026-09-14 — ★★★★★')
+  })
 })
 
 describe('serializeRecipe', () => {

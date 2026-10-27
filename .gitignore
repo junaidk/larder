@@ -9,3 +9,4 @@ e2e/.recipes/
 my-recipes/
 deploy/
 scratch/
+.DS_Store
